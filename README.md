@@ -2,6 +2,34 @@
 
 Research-driven crypto trading system using Topological Data Analysis (TDA) to detect market regimes, price reversal structures, and exchange manipulation patterns.
 
+**Author:** Minha Chung · **Status:** Research / paper-trading
+
+## Quick Start
+
+```bash
+# Install dependencies
+python3 -m pip install -r requirements.txt
+
+# Run full pipeline (CoinGecko, daily data)
+python main.py BTC 365
+
+# Run rigorous v2 validation (Coinbase hourly data, 5-fold CV, grid search)
+python examples/run_validation_v2.py BTC 180 1h
+
+# Strategy 2 (Mapper exchange manipulation detection)
+python examples/run_strategy2.py
+```
+
+## Validation: Two Tiers
+
+| Tier | Script | Data | Method | Use case |
+|------|--------|------|--------|----------|
+| v1 (basic) | `examples/run_validation.py` | CoinGecko daily | Train/val/test split | Quick sanity check |
+| **v2 (rigorous)** | `examples/run_validation_v2.py` | **Coinbase hourly** | **5-fold CV + grid search** | Statistical inference |
+
+The v2 framework uses 24× more samples (hourly vs daily), grid-searches over 3 hyperparameters, runs 5-fold time-series CV, and reports Wilson confidence intervals + bootstrap Sharpe + t-tests. See `VALIDATION_REPORT_V2.md` after running.
+
+
 ## Project Overview
 
 This project implements two complementary TDA-based trading strategies synthesized from 6 research papers on blockchain analytics and financial time series analysis:
