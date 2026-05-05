@@ -1,0 +1,53 @@
+# Environment
+.env
+.env.local
+*.env
+
+# Data (generated output, can be regenerated)
+data/raw/
+data/processed/
+data/persistence/
+*.npy
+*.csv
+*.png
+
+# Allow examples to be tracked
+!examples/*.py
+!docs/**/*.png
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Models (large files)
+models/*.pkl
+models/*.h5
+models/*.pt
+
+# iCloud sync artifacts
+.icloud
+*.icloud
