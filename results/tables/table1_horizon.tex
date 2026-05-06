@@ -1,0 +1,17 @@
+\begin{table}[h]
+\centering
+\caption{Best classifier configuration at each prediction horizon.}
+\begin{tabular}{lllrlrrl}
+\toprule
+Horizon & Model & Thresh. & Accuracy & 95\% CI & n Signals & Sharpe & Sig. \\
+\midrule
+1h & rf & 0.62 & 0.649 & [0.560, 0.730] & 117 & -4.16 & \checkmark \\
+4h & rf & 0.70 & 0.616 & [0.534, 0.691] & 143 & -2.86 & \checkmark \\
+12h & rf & 0.70 & 0.568 & [0.495, 0.636] & 187 & -1.45 & $\times$ \\
+24h & logistic & 0.70 & 0.611 & [0.587, 0.634] & 1649 & -4.89 & \checkmark \\
+3d & rf & 0.70 & 0.618 & [0.597, 0.638] & 2260 & -5.74 & \checkmark \\
+7d & logistic & 0.70 & 0.552 & [0.531, 0.573] & 2193 & -4.81 & \checkmark \\
+\bottomrule
+\end{tabular}
+\label{tab:horizon}
+\end{table}
