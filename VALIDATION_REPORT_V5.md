@@ -1,6 +1,9 @@
-# Validation Report v4: Multi-Asset Pooled TDA Strategy
+# Validation Report v5: 7-Asset Pooled TDA Strategy (180 days)
 
-**Assets:** BTC, ETH, SOL, ADA, DOT, LINK, MATIC, AVAX
+🟢 **STRATEGY VALIDATED** — Statistically significant edge (Wilson CI [55.63%, 62.98%])
+
+**Assets:** BTC, ETH, SOL, ADA, DOT, LINK, AVAX (MATIC delisted)
+**Pool:** 29,694 samples | **Signals fired:** 684 | **Days:** 180 hourly
 **Method:** Pooled multi-asset training + advanced features + regime filter
 **CV:** 5-fold time-series cross-validation (per asset)
 **Generated:** 2026-05-05 16:14:01
