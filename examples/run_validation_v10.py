@@ -44,38 +44,124 @@ from src.multi_asset_pipeline import (
     get_combined_feature_cols,
 )
 from examples.run_validation_v9 import (
-    add_targets, evaluate_kfold,
-    block_shuffle_targets, temporal_split,
+    add_targets, evaluate_kfold, temporal_split,
 )
+# NOTE: v10 deliberately does NOT use v9's `block_shuffle_targets`. v9's
+# implementation truncates the final partial block (``n_blocks = n //
+# block_hours`` then drops un-filled tail rows). v10 defines a local
+# helper below that preserves all rows including the final partial
+# block.
+
+
+# ============================================================
+# v10-local helpers (signal-weighted accuracy + leak-aware block shuffle)
+# ============================================================
+
+def weighted_accuracy(fold_df):
+    """Signal-weighted accuracy across (fold, symbol) rows of ``evaluate_kfold``.
+
+    Returns (weighted_accuracy, n_signals_total). When n_signals_total
+    is zero, returns (0.5, 0) — the neutral chance value, matching the
+    grid-search guard that requires ``n_signals >= 30``.
+
+    The earlier v10 used ``float(fold_df['direction_accuracy'].mean())``,
+    which weighs each (fold, symbol) row equally even if one row has
+    many more signals. That biases the headline accuracy toward
+    low-signal-count cells (e.g., a single fold with 5 signals can
+    drag the mean as much as a fold with 5,000). The signal-weighted
+    form is the correct pooled estimator and matches the per-asset
+    Wilson CI computation v9 uses.
+    """
+    n_sig = int(fold_df['n_signals'].sum())
+    if n_sig == 0:
+        return 0.5, 0
+    weighted = float(
+        (fold_df['direction_accuracy'] * fold_df['n_signals']).sum() / n_sig
+    )
+    return weighted, n_sig
+
+
+def block_shuffle_targets_preserve_remainder(df, block_hours=168, seed=0):
+    """Block-shuffle ``target`` per symbol while preserving every row.
+
+    Algorithm:
+      1. For each symbol group, sort rows by timestamp.
+      2. Split the per-symbol target series into contiguous blocks of
+         ``block_hours`` rows, including a final shorter block when
+         ``n % block_hours != 0``.
+      3. Shuffle the *order* of the blocks with the provided seed.
+      4. Reassemble target values in the new block order and write
+         them back to the chronological row positions.
+
+    Compared to v9's ``block_shuffle_targets``, this keeps the full
+    sample size: no rows are dropped because of an unfilled tail. Only
+    the ``target`` column is permuted; features, prices, and timestamps
+    are unchanged. The resulting DataFrame has exactly the same number
+    of rows as the input.
+    """
+    out = df.copy()
+    rng = np.random.RandomState(seed)
+    for sym, group in out.groupby('symbol', sort=False):
+        order_idx = group.sort_values('timestamp').index.values
+        n = len(order_idx)
+        if n == 0:
+            continue
+        targets_in_order = out.loc[order_idx, 'target'].values
+        starts = list(range(0, n, block_hours))
+        blocks = [targets_in_order[s:min(s + block_hours, n)] for s in starts]
+        block_order = list(range(len(blocks)))
+        rng.shuffle(block_order)
+        shuffled = np.concatenate([blocks[i] for i in block_order])
+        # length must match exactly — this is the leak-aware contract
+        assert len(shuffled) == n, (
+            f"block-shuffle row drift for {sym}: expected {n}, got "
+            f"{len(shuffled)}"
+        )
+        out.loc[order_idx, 'target'] = shuffled
+    return out
 
 
 def run_single_config_permutation(train_val_df, feature_cols, model_type, threshold,
                                    horizon, regime_filter, n_iter, n_splits=5):
-    """B-permutation test of just the BEST config (much faster than full grid)."""
+    """B-permutation test of the SELECTED best config.
+
+    Caveat: this is a **post-selection** diagnostic — the best config
+    was chosen on the unshuffled real data, so the null distribution
+    here is over chance variation *at that single config*, not over
+    chance + multiple testing. Use ``run_grid_permutation`` for the
+    multiple-testing-aware p-value.
+    """
     df_t = add_targets(train_val_df, horizon=horizon)
     accs = []
     for it in range(n_iter):
         if it % 50 == 0:
             print(f"    Single-config permutation {it}/{n_iter}...")
-        df_shuffled = block_shuffle_targets(df_t, seed=it)
+        df_shuffled = block_shuffle_targets_preserve_remainder(df_t, seed=it)
         fold_df = evaluate_kfold(
             df_shuffled, feature_cols, model_type, threshold,
             n_splits=n_splits, horizon=horizon, regime_filter=regime_filter,
         )
         if len(fold_df) > 0:
-            accs.append(float(fold_df['direction_accuracy'].mean()))
+            acc, _ = weighted_accuracy(fold_df)
+            accs.append(acc)
     return np.array(accs)
 
 
 def run_grid_permutation(train_val_df, feature_cols, horizon, n_iter, n_splits=5):
-    """B-permutation test of the full grid (multiple-testing-aware)."""
+    """B-permutation test of the full grid (multiple-testing-aware).
+
+    For each permutation, runs the entire model/threshold/regime grid
+    on shuffled labels and records the best accuracy across the grid.
+    The empirical p-value computed against this distribution is the
+    main, multiple-testing-aware evidence v10 reports.
+    """
     df_t = add_targets(train_val_df, horizon=horizon)
     best_accs = []
 
     for it in range(n_iter):
         if it % 10 == 0:
             print(f"    Grid permutation {it}/{n_iter}...")
-        df_shuffled = block_shuffle_targets(df_t, seed=10000 + it)
+        df_shuffled = block_shuffle_targets_preserve_remainder(df_t, seed=10000 + it)
         best_in_grid = -1.0
         for model_type in ['logistic', 'rf']:
             for thresh in [0.62, 0.65, 0.70]:
@@ -84,8 +170,8 @@ def run_grid_permutation(train_val_df, feature_cols, horizon, n_iter, n_splits=5
                         df_shuffled, feature_cols, model_type, thresh,
                         n_splits=n_splits, horizon=horizon, regime_filter=filt,
                     )
-                    if len(fold_df) > 0 and fold_df['n_signals'].sum() >= 30:
-                        acc = float(fold_df['direction_accuracy'].mean())
+                    if len(fold_df) > 0 and int(fold_df['n_signals'].sum()) >= 30:
+                        acc, _ = weighted_accuracy(fold_df)
                         if acc > best_in_grid:
                             best_in_grid = acc
         if best_in_grid > 0:
@@ -132,16 +218,26 @@ def run_v10(symbols=None, days=1095, n_perm_single=1000, n_perm_grid=100):
                     train_val_targeted, feature_cols, model_type, thresh,
                     n_splits=5, horizon=horizon, regime_filter=filt,
                 )
-                if len(fold_df) == 0 or fold_df['n_signals'].sum() < 30:
+                if len(fold_df) == 0 or int(fold_df['n_signals'].sum()) < 30:
                     continue
-                acc = float(fold_df['direction_accuracy'].mean())
+                acc, _ = weighted_accuracy(fold_df)
                 if acc > best_acc_real:
                     best_acc_real = acc
                     best_config = (model_type, thresh, filt)
+
+    if best_config is None:
+        raise RuntimeError(
+            "No valid v10 config found; try lowering thresholds, "
+            "checking data availability, or reducing n_splits."
+        )
+
     print(f"  Best on real data: {best_config}, accuracy = {best_acc_real:.2%}")
 
-    print(f"\n[4/6] {n_perm_single}-permutation test of BEST CONFIG only...")
-    print(f"  (Tests whether observed accuracy at this config could arise from chance)")
+    print(f"\n[4/6] {n_perm_single}-permutation POST-SELECTION DIAGNOSTIC at the best config...")
+    print(f"  This is a single-config null distribution at the config selected")
+    print(f"  on real data. It tests chance variation at THIS config only —")
+    print(f"  not chance + multiple testing. The full-grid test in [5/6] is")
+    print(f"  the main, multiple-testing-aware evidence.")
     t_start = time.time()
     perm_accs_single = run_single_config_permutation(
         train_val_df, feature_cols,
@@ -155,10 +251,12 @@ def run_v10(symbols=None, days=1095, n_perm_single=1000, n_perm_grid=100):
     n_above = int(np.sum(perm_accs_single >= best_acc_real))
     p_val_single = (n_above + 1) / (len(perm_accs_single) + 1)
     print(f"  {n_above}/{len(perm_accs_single)} permutations matched real result")
-    print(f"  Empirical p-value (single config): {p_val_single:.5f}")
+    print(f"  Empirical p-value (single-config DIAGNOSTIC): {p_val_single:.5f}")
+    print(f"  Treat this as a sanity check, not as the headline p-value.")
 
-    print(f"\n[5/6] {n_perm_grid}-permutation test of FULL GRID...")
-    print(f"  (Tests whether the BEST-OF-grid result could arise from chance)")
+    print(f"\n[5/6] {n_perm_grid}-permutation FULL-GRID test (multiple-testing-aware MAIN result)...")
+    print(f"  For every permutation, runs the entire grid and takes the BEST.")
+    print(f"  The empirical p-value here accounts for cherry-picking across the grid.")
     t_start = time.time()
     perm_accs_grid = run_grid_permutation(
         train_val_df, feature_cols, horizon=horizon, n_iter=n_perm_grid,
@@ -221,9 +319,12 @@ def write_v10_report(symbols, days, best_config, best_acc, perm_single, perm_gri
 
     n_above_s = int(np.sum(perm_single >= best_acc))
     p_s = (n_above_s + 1) / (len(perm_single) + 1)
-    md.append(f"## 2. Single-Config Permutation Test (B = {n_single})\n")
-    md.append(f"Block-shuffled targets in 7-day blocks, reran the BEST config.")
-    md.append(f"Tests whether the {best_acc:.2%} accuracy at this exact config could be chance.\n")
+    md.append(f"## 2. Post-Selection Single-Config Diagnostic (B = {n_single})\n")
+    md.append(f"Block-shuffled targets in 7-day blocks (final partial block preserved), reran the BEST config.")
+    md.append(f"\n**Important caveat:** the best config was selected on the unshuffled real data, "
+              f"so this null distribution is over chance variation *at this single config only*, "
+              f"not over chance + multiple testing across the grid. Treat this section as a "
+              f"sanity check; section 3 (full-grid permutation) is the headline multiple-testing-aware result.\n")
     md.append(f"| Metric | Value |")
     md.append(f"|--------|-------|")
     md.append(f"| Permutations run | {len(perm_single)} |")
@@ -236,9 +337,9 @@ def write_v10_report(symbols, days, best_config, best_acc, perm_single, perm_gri
 
     n_above_g = int(np.sum(perm_grid >= best_acc))
     p_g = (n_above_g + 1) / (len(perm_grid) + 1)
-    md.append(f"## 3. Full-Grid Permutation Test (B = {n_grid})\n")
-    md.append(f"For each permutation, ran the FULL grid search and took the BEST.")
-    md.append(f"Tests whether the best-of-grid result could be chance + multiple testing.\n")
+    md.append(f"## 3. Full-Grid Permutation Test (B = {n_grid}) — main multiple-testing-aware result\n")
+    md.append(f"For each permutation, reran the FULL grid search on block-shuffled targets and recorded the BEST accuracy across the grid.")
+    md.append(f"This null distribution accounts for cherry-picking across model × threshold × regime configurations, so its empirical p-value is the headline evidence v10 reports.\n")
     md.append(f"| Metric | Value |")
     md.append(f"|--------|-------|")
     md.append(f"| Permutations run | {len(perm_grid)} |")
@@ -250,21 +351,28 @@ def write_v10_report(symbols, days, best_config, best_acc, perm_single, perm_gri
     md.append(f"| Computation time | {elapsed_grid/60:.1f} min |\n")
 
     md.append(f"## 4. Verdict\n")
+    md.append(f"**Headline (full-grid, multiple-testing-aware):**")
+    if p_g < 0.001:
+        md.append(f"- Strongly significant (p = {p_g:.4f} < 0.001).")
+    elif p_g < 0.01:
+        md.append(f"- Significant (p = {p_g:.4f} < 0.01).")
+    elif p_g < 0.05:
+        md.append(f"- Marginally significant (p = {p_g:.4f} < 0.05).")
+    else:
+        md.append(f"- Not significant (p = {p_g:.4f}).")
+
+    md.append(f"\n**Post-selection single-config diagnostic** (sanity check, NOT a headline p-value):")
     if p_s < 0.001:
-        md.append(f"**Single-config:** Strongly significant (p = {p_s:.5f} < 0.001).")
+        md.append(f"- Diagnostic p = {p_s:.5f} (< 0.001).")
     elif p_s < 0.01:
-        md.append(f"**Single-config:** Significant (p = {p_s:.4f} < 0.01).")
+        md.append(f"- Diagnostic p = {p_s:.4f} (< 0.01).")
     elif p_s < 0.05:
-        md.append(f"**Single-config:** Marginally significant (p = {p_s:.4f} < 0.05).")
+        md.append(f"- Diagnostic p = {p_s:.4f} (< 0.05).")
     else:
-        md.append(f"**Single-config:** Not significant (p = {p_s:.4f}).")
+        md.append(f"- Diagnostic p = {p_s:.4f}.")
 
-    if p_g < 0.05:
-        md.append(f"**Full-grid:** Best-of-grid result survives multiple-testing correction (p = {p_g:.4f}).")
-    else:
-        md.append(f"**Full-grid:** Best-of-grid result NOT significantly better than chance grid maximum (p = {p_g:.4f}).")
-
-    md.append(f"\nThis run definitively resolves the v9 limitation that 25 permutations could not establish p < 0.001.")
+    md.append(f"\nThis run materially strengthens the permutation evidence relative to v9, "
+              f"subject to the grid, sample window, and data source tested.")
 
     md_text = "\n".join(md)
     with open('results/V10_MULTIYEAR.md', 'w') as f:
