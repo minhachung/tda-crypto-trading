@@ -153,7 +153,18 @@ def test_v12_add_targets_uses_close_column():
 # ============================================================
 
 def test_fold_purging_no_train_target_overlaps_test():
-    """For every fold, max(train + horizon) < min(test)."""
+    """Low-level formula sanity check: applies the purge formula
+    `tr_idx[tr_idx + horizon < te_start]` directly to time_series_kfold
+    output and verifies (a) no purged train target overlaps the test
+    fold and (b) at least one fold's *unpurged* tail would have
+    overlapped — proving the formula is non-trivial.
+
+    The integration test ``test_evaluate_kfold_leaksafe_purges_train_indices``
+    below is the stronger guarantee: it verifies v12's *actual call site*
+    applies this same formula. This test stays as documentation of the
+    formula itself, independent of v12.
+
+    For every fold, max(train + horizon) < min(test)."""
     n_samples = 500
     horizon = 24
     n_splits = 5
@@ -291,7 +302,14 @@ def test_imager_fit_on_train_subset_transforms_unseen_test():
     """Leak-safe contract: fit on train, transform any held-out diagram
     set, no shape drift, no exception. Uses TEST diagrams whose
     (birth, persistence) ranges fall OUTSIDE the train ranges — common
-    in finance data where holdout volatility may exceed train ranges."""
+    in finance data where holdout volatility may exceed train ranges.
+
+    This test validates **robustness** (fixed shape, no exception) on
+    out-of-range inputs. It deliberately does NOT assert that the
+    transformed output is non-zero: out-of-train-range diagrams may
+    legitimately map to mostly-zero or fully-zero feature vectors
+    depending on where the fitted grid clips them. Asserting non-zero
+    here would conflate robustness with extrapolation quality."""
     rng = np.random.RandomState(1)
     fitter = LeakSafePersistenceImagerFitter(resolution=8)
 
@@ -423,6 +441,18 @@ def test_evaluate_kfold_leaksafe_purges_train_indices(monkeypatch):
         n_splits=n_splits,
         horizon=horizon,
         verbose=False,
+    )
+
+    # The imager must be fit exactly once per fold under
+    # feature_set='base_plus_v2'. A regression that fits the imager
+    # globally before the fold loop, or fits it once and reuses across
+    # folds, or fails to fit it at all, would all violate this count.
+    assert len(fit_calls) == n_splits, (
+        f"Expected the imager to be fit exactly once per fold "
+        f"({n_splits} folds → {n_splits} fit() calls) when running with "
+        f"feature_set='base_plus_v2', but recorded {len(fit_calls)} "
+        f"fit() calls. Likely regression: imager fit moved outside the "
+        f"per-fold loop, or the v2 path stopped fitting the imager."
     )
 
     # Compute the expected purged train count per fold using the same
