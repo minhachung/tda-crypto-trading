@@ -17,13 +17,21 @@ the representation — exactly the class of leak the post-fix pipeline
 is supposed to prevent.
 
 v12 therefore:
-  - Computes raw persistence diagrams ONCE (intrinsic to each window;
-    no leakage in the diagram step itself).
-  - Caches those diagrams in memory for the duration of the run.
+  - Builds point clouds with **causal normalization** (each window's
+    normalization uses only data up to the window's end), so each
+    window's persistence diagram is intrinsic to *its own* history —
+    not contaminated by global mean/std taken over the full pool.
+    Without causal normalization the diagrams themselves would silently
+    leak future distribution and downstream leak-safety would be
+    cosmetic.
+  - Computes raw persistence diagrams ONCE on those causal point
+    clouds and caches them in memory for the duration of the run.
   - For each k-fold split, fits a fresh PersistenceImager on the
     TRAIN-fold diagrams ONLY, then transforms train+test diagrams
     with that fitted imager. The image features for the same window
     therefore differ across folds — that's the correct behaviour.
+  - PURGES train indices by `horizon` rows so train labels (which
+    look `horizon` rows ahead) cannot peek into the test fold.
 
 FIVE-WAY ABLATION
 -----------------
@@ -34,9 +42,15 @@ For each classifier ∈ {logistic (L2-regularised), xgboost}:
     base + tda_v2          221 features  (new 200-dim persistence image)
     base + tda_v1 + tda_v2 237 features  (everything)
     base + shuffled_v2     221 features  (negative control:
-                                          v2 features randomly
-                                          permuted across windows
-                                          inside each train fold)
+                                          v2 train rows are permuted
+                                          *within each train fold* —
+                                          the v2-window correspondence
+                                          is broken on the train side
+                                          while the v2 distribution is
+                                          preserved. Test rows are NOT
+                                          shuffled, so this is a
+                                          one-sided control on the
+                                          training-time signal only.)
 
 A positive Δ on Base+v2 vs Base alone — under either classifier —
 attributes the v9 ablation-negative result to the v1 representation.
@@ -77,29 +91,14 @@ from src.advanced_features import (
     build_advanced_features, get_tda_features, ML_FEATURE_SET,
 )
 from src.persistent_homology import compute_features_for_windows
+from src.multi_asset_pipeline import (
+    create_causal_normalized_windows,
+    add_targets as _add_targets_causal,
+)
 from src.tda_v2_features import (
     compute_diagrams_only, LeakSafePersistenceImagerFitter,
 )
 from src.validation_v2 import wilson_interval, time_series_kfold
-
-
-# ============================================================
-# Per-asset preprocessing
-# ============================================================
-
-def _normalize(X):
-    mean = X.mean(axis=0)
-    std = X.std(axis=0)
-    std[std == 0] = 1.0
-    return (X - mean) / std
-
-
-def _windows(X, window_size=20):
-    pcs, end_idx = [], []
-    for i in range(0, len(X) - window_size + 1):
-        pcs.append(X[i:i + window_size])
-        end_idx.append(i + window_size - 1)
-    return pcs, end_idx
 
 
 def prepare_asset(symbol, days=1095, window_size=20, verbose=True):
@@ -109,8 +108,15 @@ def prepare_asset(symbol, days=1095, window_size=20, verbose=True):
       'h0_diagrams': list of (n_i, 2) arrays — one per window, finite-persistence H0,
       'h1_diagrams': list of (m_i, 2) arrays — one per window, finite-persistence H1,
     }
-    The persistence diagrams in this dict carry no temporal leakage —
-    each is intrinsic to a single window.
+
+    Point clouds are built with **causal normalization**
+    (create_causal_normalized_windows): each window's (mean, std) is
+    derived from history up to the window's end only, never from
+    the future. This is the same convention the fixed-pipeline
+    multi_asset_pipeline.fetch_and_build_asset uses, and it is what
+    makes the persistence diagrams temporally honest. Without it,
+    raw point clouds would silently encode the global mean/std and
+    leak future distribution into every window's diagram.
     """
     if verbose:
         print(f"  [{symbol}] Fetching {days} days hourly")
@@ -126,10 +132,11 @@ def prepare_asset(symbol, days=1095, window_size=20, verbose=True):
         return None
 
     X_tda, _ = get_tda_features(df)
-    X_norm = _normalize(X_tda)
-    pcs, end_idx = _windows(X_norm, window_size=window_size)
+    pcs, end_idx = create_causal_normalized_windows(X_tda,
+                                                      window_size=window_size,
+                                                      stride=1)
     if verbose:
-        print(f"  [{symbol}] Created {len(pcs)} point clouds")
+        print(f"  [{symbol}] Created {len(pcs)} causal-normalized point clouds")
 
     aligned_idx = np.array(end_idx, dtype=int)
     aligned_idx = aligned_idx[aligned_idx < len(df)]
@@ -148,7 +155,7 @@ def prepare_asset(symbol, days=1095, window_size=20, verbose=True):
                               tda_v1.reset_index(drop=True)], axis=1)
 
     if verbose:
-        print(f"  [{symbol}] Computing raw persistence diagrams (no fit, no leak)")
+        print(f"  [{symbol}] Computing raw persistence diagrams (no fit)")
     h0_list, h1_list = compute_diagrams_only(pcs[:len(aligned_df)],
                                                 max_dim=1, verbose=False)
 
@@ -163,12 +170,12 @@ def prepare_asset(symbol, days=1095, window_size=20, verbose=True):
 # ============================================================
 
 def add_targets(df, horizon=72):
-    df = df.copy()
-    df['target'] = (
-        df.groupby('symbol')['close']
-        .transform(lambda x: (x.shift(-horizon) > x).astype(float))
-    )
-    return df.dropna(subset=['target']).reset_index(drop=True)
+    """Wrapper around the fixed multi_asset_pipeline.add_targets, which
+    creates future_price/future_return/target via np.where(notna, ...) and
+    drops rows where the future is missing — so the final ``horizon`` rows
+    per asset are NOT silently labelled as 0 (the bug the earlier in-line
+    `(shift > x).astype(float)` introduced)."""
+    return _add_targets_causal(df, horizon=horizon, price_col='close')
 
 
 def base_cols(df):
@@ -227,6 +234,7 @@ MODELS = ['logistic', 'xgboost']
 
 def evaluate_kfold_leaksafe(asset_data, feature_set, model_type,
                               prob_threshold=0.65, n_splits=5,
+                              horizon=72,
                               imager_resolution=10, random_state=42,
                               verbose=True):
     """Time-series 5-fold CV, leak-safe.
@@ -235,15 +243,22 @@ def evaluate_kfold_leaksafe(asset_data, feature_set, model_type,
                  with df containing target + base + v1 columns.
     feature_set : one of FEATURE_SETS.
     model_type  : one of MODELS.
+    horizon    : the prediction horizon (in rows) used when targets were
+                 created. Train indices are PURGED so that no train
+                 sample's target overlaps with the test fold —
+                 specifically `tr_idx + horizon < min(te_idx)`.
 
     Inside each fold:
       1. Per-symbol time_series_kfold splits → train/test indices.
-      2. If feature_set needs v2: fit a LeakSafePersistenceImagerFitter
-         on the UNION of all assets' train diagrams ONLY, then transform
-         train + test diagrams per asset.
-      3. If feature_set is 'base_plus_shuffled_v2': permute train v2
+      2. **Train indices are purged by `horizon` rows** so train labels
+         (which look `horizon` rows ahead) cannot peek into the test
+         fold. This is the same purging convention v9/v10 use post-fix.
+      3. If feature_set needs v2: fit a LeakSafePersistenceImagerFitter
+         on the UNION of all assets' purged-train diagrams ONLY, then
+         transform train + test diagrams per asset.
+      4. If feature_set is 'base_plus_shuffled_v2': permute train v2
          rows within each asset (negative control) before fitting clf.
-      4. Train classifier on union of assets' train rows; evaluate per
+      5. Train classifier on union of assets' train rows; evaluate per
          asset on test rows. Aggregate accuracy.
     """
     needs_v2 = 'v2' in feature_set
@@ -259,16 +274,23 @@ def evaluate_kfold_leaksafe(asset_data, feature_set, model_type,
 
     rows = []
     for fold_idx in range(n_splits):
-        # --- Step A: collect train indices per asset and (if needed)
-        # accumulate train diagrams across assets to fit a single imager.
+        # --- Step A: collect train indices per asset (with horizon purge)
+        # and (if needed) accumulate train diagrams across assets to fit
+        # a single imager.
         per_asset_split = {}
         all_train_h0, all_train_h1 = [], []
         for symbol, (data, folds) in fold_cache.items():
             if fold_idx >= len(folds):
                 continue
             tr_idx, te_idx = folds[fold_idx]
+            # PURGE: drop train rows whose target peeks into (or past) the
+            # test fold. A train row at index t has its target at t+horizon;
+            # if t+horizon >= min(te_idx) the target overlaps the test set.
+            if len(te_idx) > 0 and len(tr_idx) > 0:
+                te_start = int(np.min(te_idx))
+                tr_idx = tr_idx[tr_idx + horizon < te_start]
             per_asset_split[symbol] = (data, tr_idx, te_idx)
-            if needs_v2:
+            if needs_v2 and len(tr_idx) > 0:
                 all_train_h0.extend(data['h0_diagrams'][i] for i in tr_idx)
                 all_train_h1.extend(data['h1_diagrams'][i] for i in tr_idx)
 
@@ -425,13 +447,11 @@ def run_v12(symbols=None, days=1095, horizon=72, prob_threshold=0.65,
         time.sleep(1)
     print(f"  {len(asset_data)} assets ready")
 
-    # Apply target horizon to each asset.
+    # Apply target horizon to each asset. add_targets drops rows where
+    # future_price is missing (the tail `horizon` rows), so we trim the
+    # diagrams to the same head-aligned length.
     for symbol, data in asset_data.items():
         df_t = add_targets(data['df'], horizon=horizon)
-        keep_idx = df_t.index.values
-        # Reindex h0/h1 diagrams to align with target-trimmed df.
-        # add_targets only drops rows from the tail (where target is NaN),
-        # so we keep diagrams [:len(df_t)] from the head — same alignment.
         n_keep = len(df_t)
         data['df'] = df_t
         data['h0_diagrams'] = data['h0_diagrams'][:n_keep]
@@ -453,6 +473,7 @@ def run_v12(symbols=None, days=1095, horizon=72, prob_threshold=0.65,
             df_eval = evaluate_kfold_leaksafe(
                 asset_data, feature_set, model_type,
                 prob_threshold=prob_threshold,
+                horizon=horizon,
                 imager_resolution=imager_resolution,
                 verbose=False,
             )
