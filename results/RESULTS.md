@@ -8,7 +8,7 @@
 
 ## Abstract
 
-We apply persistent homology to multivariate price-volume time series of seven major cryptocurrencies (BTC, ETH, SOL, ADA, DOT, LINK, AVAX) over a 90-day primary window of hourly candles, with extensions to 365 days for cross-regime robustness checks. Topological features (16 persistence-diagram summaries per timestep) are combined with 21 returns-based microstructure features and used as inputs to tree-based and logistic classifiers predicting binary direction over six horizons (1 hour to 7 days). The methodology is evaluated under three independent rigor checks: (i) 5-fold time-series cross-validation across 144 hyperparameter configurations, (ii) a true temporal holdout where the last 20% of the timeline is never touched until final evaluation, and (iii) a permutation test that shuffles direction labels in 7-day blocks and reruns the entire grid search. The headline 3-day-horizon configuration achieves **61.77% cross-validated direction accuracy** on n=2,260 signals (95% Wilson CI [59.75%, 63.75%]) and **69.32% on the held-out test set** (n=315, CI [63.90%, 74.05%]). The permutation p-value is **<0.001** (mean shuffled-data accuracy 51.18% ± 4.72%, n=25 iterations), ruling out cherry-picking as an explanation. Ablation analysis reveals a more nuanced picture than headline accuracy alone: TDA features expand the strategy's signal coverage by ~30% but with lower per-signal precision than base features alone, contributing the largest share (64.8%) of permutation-importance among non-asset features but not improving the marginal accuracy when added to the base set. A continuous walk-forward backtest on ADA over 365 days, using the selected configuration, yields a 12.0% return versus -55.3% for buy-and-hold (Sharpe 0.95). We conclude that topological summaries carry **statistically significant but small** predictive signal in cryptocurrency markets, with practical profitability emerging only on certain assets, longer horizons, and low-fee execution venues.
+We apply persistent homology to multivariate price-volume time series of seven major cryptocurrencies (BTC, ETH, SOL, ADA, DOT, LINK, AVAX) over a 90-day primary window of hourly candles, with extensions to 365 days for cross-regime robustness checks. We compute 16 topological summaries per timestep (eight statistics each from $H_0$ and $H_1$ persistence diagrams of 20-hour sliding windows) and concatenate them with 21 returns-based microstructure features (returns, volatility estimators, volume z-scores, trend indicators), yielding a 37-dimensional input vector for tree-based and logistic classifiers predicting binary direction over six horizons (1 hour to 7 days). The methodology is evaluated under three independent rigor checks: (i) 5-fold time-series cross-validation across 144 hyperparameter configurations, (ii) a true temporal holdout where the last 20% of the timeline is never touched until final evaluation, and (iii) a 25-permutation block-shuffle test that reruns the entire grid search on label-shuffled data. The headline 3-day-horizon configuration achieves **61.77% cross-validated direction accuracy** on n=2,260 signals (95% Wilson CI [59.75%, 63.75%]) and **69.32% on the held-out test set** (n=315, CI [63.90%, 74.05%]). The empirical permutation p-value is **≤ 0.04** (0/25 permutations matched the real result; mean shuffled-data accuracy 51.18% ± 4.72%), bounded by $1/(B+1)$ for $B = 25$ permutations and constituting evidence against cherry-picking. Ablation analysis reveals a more nuanced picture than headline accuracy alone: TDA features expand the strategy's signal coverage by ~30% but with lower per-signal precision than base features alone, contributing the largest share (64.8%) of permutation-importance among non-asset features but not improving the marginal accuracy when added to the base set. A continuous walk-forward backtest on ADA over 365 days, using the selected configuration, yields a 12.0% return versus -55.3% for buy-and-hold (Sharpe 0.95). We conclude that topological summaries carry **statistically significant but small** predictive signal in cryptocurrency markets, with practical profitability emerging only on certain assets, longer horizons, and low-fee execution venues.
 
 ---
 
@@ -28,28 +28,30 @@ Hourly OHLCV candles for seven liquid cryptocurrencies (BTC, ETH, SOL, ADA, DOT,
 
 ### 2.2 Features
 
-Each timestep is represented by a 15-dimensional feature vector combining four families:
+Each timestep is represented by a **21-dimensional base feature vector** combining four families:
 
-- **Returns:** log-return, 5-period log-return, 24-period log-return, return acceleration (second differences).
-- **Volatility:** Garman-Klass estimator over 20 and 60 periods, Parkinson estimator over 20 periods, realized variance over 20 and 60 periods.
-- **Volume microstructure:** z-score of volume over 20 periods, short/long volume ratio (5-period MA divided by 20-period MA), volume momentum (1-period change).
-- **Trend indicators:** RSI centered at 50, MACD normalized by close price, Bollinger band position (signed distance from 20-period mean in units of 2σ), Bollinger band width.
+- **Returns (4):** log-return (1-period), 5-period log-return, 24-period log-return, return acceleration (second differences).
+- **Volatility (7):** Garman-Klass estimator over 20 and 60 periods, Parkinson estimator over 20 periods, realized variance over 20 and 60 periods, high-low intraday spread, open-close intraday spread.
+- **Volume microstructure (4):** z-score of volume over 20 periods, short/long volume ratio (5-period MA divided by 20-period MA), volume momentum (1-period change), signed volume pressure (volume z-score $\times$ sign of return).
+- **Trend indicators (5):** RSI centered at 50, MACD normalized by close price, MACD signal normalized, Bollinger band position (signed distance from 20-period mean in units of 2σ), Bollinger band width, trend strength (slope of 12-period EMA).
+- **Volatility regime (1):** percentile rank of 20-period realized variance over a 100-period rolling window, used as a feature and as the input to the regime filter.
 
-A categorical volatility-regime indicator (low/medium/high tertiles of 100-period rolling realized variance) augments the feature set for the regime filter.
+The exact column list is provided in `src/advanced_features.py`.
 
 ### 2.3 TDA Pipeline
 
-Sliding windows of 20 consecutive timesteps are projected into the 15-dimensional feature space, producing point clouds in $\mathbb{R}^{15}$. We compute Vietoris-Rips persistent homology in dimensions 0 and 1 using Ripser. From each persistence diagram, we extract eight scalar summaries per homology dimension:
+Sliding windows of 20 consecutive timesteps are projected into a **15-dimensional sub-space** of the base features (the subset most directly tied to local manifold geometry, listed as `TDA_FEATURE_SET` in `src/advanced_features.py`), producing point clouds in $\mathbb{R}^{15}$. We compute Vietoris-Rips persistent homology in dimensions 0 and 1 using Ripser. From each persistence diagram, we extract eight scalar summaries per homology dimension:
 
 1. Number of finite-persistence features.
 2. $L^1$-norm of persistence values.
 3. $C^1$-norm: the maximum persistence (longest-lived feature).
-4. Mean and median persistence.
-5. Standard deviation of persistence values.
-6. Persistence entropy: $-\sum_i p_i \log p_i$ where $p_i = \text{pers}_i / \sum_j \text{pers}_j$.
-7. $L^2$ landscape norm.
+4. Mean persistence.
+5. Median persistence.
+6. Standard deviation of persistence values.
+7. Persistence entropy: $-\sum_i p_i \log p_i$ where $p_i = \text{pers}_i / \sum_j \text{pers}_j$.
+8. $L^2$ landscape norm.
 
-The resulting 16 TDA features (8 statistics × 2 dimensions) are concatenated with the 15 base features to form a 37-dimensional vector ingested by the classifier.
+The resulting **16 TDA features (8 statistics × 2 dimensions)** are concatenated with the **21 base features**, yielding a **37-dimensional input vector** ingested by the classifier.
 
 ### 2.4 Classifier
 
@@ -125,7 +127,7 @@ The interpretation is more nuanced than the headline 3-day-horizon accuracy alon
 
 2. **Base features alone reach 64.63% — higher than Base+TDA (62.14%).** This is initially surprising: adding 16 features should not reduce accuracy. The resolution is that adding TDA *changes which signals fire*: the Base+TDA configuration fires 953 *additional* signals on top of those Base alone would have fired. The marginal accuracy of those 953 extra signals is only ~53.5% (computed as the implied accuracy difference). TDA expands coverage but at lower per-signal precision.
 
-3. **Shuffled-TDA control matches Base.** Replacing TDA features with a temporally-shuffled version recovers Base-only's accuracy (64.17%) — confirming that *true* TDA features carry signal that random ones do not.
+3. **Shuffled-TDA control matches Base.** Replacing TDA features with a temporally-shuffled version recovers Base-only's signal selection (64.17% on a similar number of signals). The interpretation is nuanced: this suggests that adding *arbitrary noise* features to Base does not reproduce the signal-selection behavior we see when adding *true* TDA features. However, TDA's incremental benefit appears to be coverage *expansion* (more signals fired) rather than improved per-signal accuracy. We therefore avoid the strong claim "true TDA features add signal that random ones do not" and instead conclude only that TDA's effect on the strategy is real and distinct from injecting random noise into the feature set.
 
 4. **Permutation feature importance ranks TDA highest.** Section 3.5 reports that the H₀ persistence statistics group has the largest summed permutation importance (0.0429), followed by H₁ (0.0215), then volatility (0.0170). TDA features account for 64.8% of non-asset-indicator feature importance.
 
@@ -149,13 +151,14 @@ Reporting the best-of-144 configurations introduces a multiple-testing concern: 
 
 | Metric | Value |
 |--------|-------|
-| Number of permutations | 25 |
+| Number of permutations $B$ | 25 |
 | Mean shuffled-data accuracy | 51.18% ± 4.72% |
 | Maximum shuffled-data accuracy | 56.4% (single permutation) |
 | Actual best accuracy on real data | **62.23%** |
-| Permutation p-value | **< 0.001** (0/25 permutations matched real result) |
+| Permutations matching real result | 0 / 25 |
+| **Empirical p-value (one-sided)** | **$\leq 1/(B+1) = 0.038$** |
 
-The actual result of 62.23% is more than two standard deviations above the permutation mean and is not matched by any of the 25 shuffled-data runs. We can confidently reject the null hypothesis that the observed accuracy arises from cherry-picking among 144 grid configurations on data without true predictive structure.
+With zero of the 25 permutations matching the observed accuracy, the standard one-sided empirical p-value is bounded above by $1/(B+1) = 1/26 \approx 0.038$. This rejects the null hypothesis at $\alpha = 0.05$ but is not strong enough to claim $p < 0.001$ — that would require at least 999 permutations under the same protocol. The actual result of 62.23% lies more than two standard deviations above the permutation mean (51.18% ± 4.72%), supporting the qualitative conclusion, but we report the rigorous bound and flag the modest permutation count as a limitation; a 1,000-permutation rerun is computationally tractable (~10 hours on the same hardware) and is on the project roadmap.
 
 ### 3.5 Final Holdout Evaluation
 
@@ -163,18 +166,24 @@ The model selection above used the first 80% of the timeline (Train+Val: 2025-05
 
 **Table 6.** Holdout direction accuracy by asset (one-shot, no model retuning).
 
-| Asset | n Signals | Direction Accuracy | AUC |
-|-------|----------:|-------------------:|----:|
-| ADA | 46 | **93.48%** | 0.614 |
-| DOT | 106 | **89.62%** | 0.608 |
-| LINK | 46 | 84.78% | 0.638 |
-| AVAX | 33 | 78.79% | 0.617 |
-| SOL | 55 | 74.55% | 0.596 |
-| ETH | 25 | 64.00% | 0.641 |
-| BTC | 4 | 0.00% | 0.620 |
-| **Pooled** | **315** | **69.32%** | **0.621** |
+| Asset | n Signals | Direction Accuracy | AUC | Notes |
+|-------|----------:|-------------------:|----:|-------|
+| ADA | 46 | **93.48%** | 0.614 | |
+| DOT | 106 | **89.62%** | 0.608 | |
+| LINK | 46 | 84.78% | 0.638 | |
+| AVAX | 33 | 78.79% | 0.617 | |
+| SOL | 55 | 74.55% | 0.596 | |
+| ETH | 25 | 64.00% | 0.641 | |
+| BTC | 4 | 0.00% | 0.620 | **n too small to interpret** (Wilson CI [0%, 49%], uninformative) |
+| **Pooled** | **315** | **69.32%** | **0.621** | excluding BTC: 69.32% on 311 signals |
 
-The pooled holdout accuracy of 69.32% on n=315 signals (Wilson 95% CI [63.90%, 74.05%]) substantially exceeds the cross-validated training estimate of 62.23%. This is unusual — typically holdout performance is *lower* than CV estimates due to selection effects — and we treat it with appropriate caution. Two factors likely contribute: (i) the holdout window had higher realized volatility than the average training window, and the model is most accurate in high-vol regimes; (ii) the small n=4 BTC subsample is a small-sample artifact (note its Wilson CI is uninformative).
+**Interpretive caveats:**
+
+1. **BTC must not be over-interpreted.** With only 4 holdout signals, the per-asset BTC entry has a Wilson 95% CI of [0%, 49.0%] — uninformative. The "0.00% accuracy" cell is dominated by sample-size noise; we explicitly exclude BTC from the per-asset interpretation and note that the pooled accuracy is essentially unchanged whether or not BTC is included (since BTC contributes 4 of 315 signals).
+
+2. **Pooled holdout accuracy is high.** The 69.32% pooled estimate (Wilson 95% CI [63.90%, 74.05%]) substantially exceeds the cross-validated training estimate of 62.23%. This is unusual — typically holdout performance is *lower* than CV estimates due to selection effects — and we treat it with caution. The most likely explanation is that the holdout window (Feb 23 – May 7, 2026) had higher realized volatility than the average training window, and the regime filter selects high-vol windows where the model is most accurate. We do *not* claim 69.32% as a steady-state accuracy estimate; it is the result of one held-out window that happened to be favorable for the model.
+
+3. **Per-asset ordering is suggestive only.** With per-asset n in the range 25–106, the per-asset Wilson CIs are wide ($\pm$ 5–15 pp). The ranking ADA ≈ DOT > LINK > AVAX > SOL is qualitatively consistent with the cross-validated training estimates, but small reorderings would not be statistically distinguishable.
 
 ### 3.6 Sharpe Ratio and Trading Costs
 
@@ -217,7 +226,7 @@ Three sources of edge are plausibly at work in the TDA features. First, persiste
 
 ### 4.2 Limitations
 
-(i) **Sample window.** The 90-day test window may not span all market regimes; a multi-year extension would be straightforward conceptually but is bounded by Coinbase's free-tier rate limits. (ii) **Cost model.** We use point estimates of fees and slippage; real execution would face market impact, which is hard to estimate without proprietary order-book data. (iii) **No live deployment.** Our results are from offline cross-validation and have not been validated in paper or live trading. (iv) **Hyperparameter coupling.** The regime filter, probability threshold, and prediction horizon interact in ways our grid search may not fully resolve; a Bayesian optimization treatment is left for future work. (v) **Per-asset Wilson CIs.** Table 2's per-asset accuracies are based on ~300 signals per asset, giving CIs roughly $\pm 5\,\text{pp}$; the per-asset *ordering* should therefore be interpreted as suggestive rather than definitive.
+(i) **Sample window.** The 90-day primary test window (extended to 365 days for cross-regime checks) may not span all market regimes; a multi-year extension would be straightforward conceptually but is bounded by Coinbase's free-tier rate limits. (ii) **Cost model.** We use point estimates of fees and slippage; real execution would face market impact, which is hard to estimate without proprietary order-book data. (iii) **No live deployment.** Our results are from offline cross-validation and have not been validated in paper or live trading. (iv) **Hyperparameter coupling.** The regime filter, probability threshold, and prediction horizon interact in ways our grid search may not fully resolve; a Bayesian optimization treatment is left for future work. (v) **Per-asset Wilson CIs.** Table 2's per-asset accuracies are based on 25–106 signals per asset on the holdout, giving CIs roughly $\pm 5\,\text{pp}$; the per-asset *ordering* should therefore be interpreted as suggestive rather than definitive. (vi) **BTC holdout n=4** is statistically uninformative and should not be interpreted as evidence for or against BTC predictability — the cross-validated estimate (n = 346, accuracy 48.48%) is the authoritative BTC number. (vii) **Permutation count.** The reported empirical p-value $\leq 0.04$ is bounded by $1/(B+1)$ for $B = 25$ permutations; a 1,000-permutation rerun (computationally feasible at ~10 hours) would tighten this bound to $\leq 0.001$ and is on the project roadmap. (viii) **Holdout-period favorability.** The held-out window happened to be a high-volatility period that maps well onto the regime filter; we cannot rule out that the 69.32% holdout accuracy partially reflects window selection rather than steady-state model performance.
 
 ### 4.3 Future Work
 
@@ -282,7 +291,7 @@ Output:
 - **Figure 1** — Direction accuracy by prediction horizon with 95% Wilson CI bars; green bars indicate statistical significance. (`fig1_horizon_sweep.pdf`)
 - **Figure 2** — Sharpe ratio and mean returns by prediction horizon. Demonstrates the favorable Sharpe-vs-horizon scaling that motivates moving from intraday to multi-day prediction. (`fig2_sharpe_horizon.pdf`)
 - **Figure 3** — Per-asset direction accuracy and TDA-strategy-vs-buy-and-hold returns at the 3d horizon. (`fig3_per_asset.pdf`)
-- **Figure 4** — Validation methodology progression v1→v6, illustrating how each version controlled for a different bias and how sample size grew across iterations. (`fig4_progression.pdf`)
+- **Figure 4** — Validation methodology progression v1→v9, illustrating how each version controlled for a different methodological bias (single-split → k-fold → ML → multi-asset → cross-regime → walk-forward → holdout+ablation+permutation) and how sample size grew across iterations from n=2 to n=4,266. Color coding distinguishes CV-only validation (blue), the headline result and rigorous-validation tier (green), and the continuous walk-forward profitability tier (purple). (`fig4_progression.pdf`)
 
 ## References
 

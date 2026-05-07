@@ -213,8 +213,9 @@ def build_paper(md_path, pdf_path):
     )
     story.append(Paragraph(
         "<b>Headline result:</b> 61.77% cross-validated direction accuracy at "
-        "the 3-day horizon (n = 2,260, Wilson 95% CI [59.75%, 63.75%]) with a "
-        "permutation p-value &lt; 0.001 and a held-out test accuracy of 69.32% "
+        "the 3-day horizon (n = 2,260, Wilson 95% CI [59.75%, 63.75%]) with an "
+        "empirical permutation p-value &le; 0.04 (0/25 shuffled-data runs "
+        "matched) and a held-out test accuracy of 69.32% "
         "(n = 315, CI [63.90%, 74.05%]). Statistically rigorous; "
         "economically marginal under typical retail fees.",
         headline_style
@@ -378,10 +379,13 @@ def build_paper(md_path, pdf_path):
          'vs buy-and-hold returns (right) at the best horizon. ADA and SOL show '
          'the highest predictability; BTC sits near chance.'),
         ('fig4_progression.png',
-         '<b>Figure 4.</b> Validation methodology progression v1–v6. Left: '
+         '<b>Figure 4.</b> Validation methodology progression v1–v9. Left: '
          'direction accuracy with Wilson CI lower bound across versions. Right: '
-         'sample size (log scale) shows how each iteration expanded statistical '
-         'power.'),
+         'sample size (log scale, n=2 to n=4,266) shows how each iteration '
+         'expanded statistical power. Color coding distinguishes CV-only '
+         'validation tiers (blue), the headline result and rigorous tier '
+         '(green), and the continuous walk-forward profitability tier '
+         '(purple).'),
     ]:
         fp = figure_path(figname)
         if fp:
