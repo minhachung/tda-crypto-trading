@@ -4,35 +4,34 @@
 will reveal whether the v6/v7 direction-accuracy edge converts to profit.
 
 **Setup:** 365 days hourly data, walk-forward from day 60, 7d holds, p>0.65 threshold, up to 50% position size.
-**Date:** 2026-05-06
+**Date:** 2026-05-07
 
 
 ## Results
 
 | Scenario | Asset | Trades | Strategy | Buy-Hold | Diff | Sharpe | Max DD |
 |----------|-------|-------:|---------:|---------:|-----:|-------:|-------:|
-| binance_maker | ADA | 38 | +11.99% | -55.25% | +67.24% | 0.95 | -9.31% |
-| binance_maker | SOL | 37 | -15.96% | -41.82% | +25.86% | -1.44 | -24.57% |
-| coinbase_taker | ADA | 38 | +10.95% | -55.25% | +66.20% | 0.88 | -9.31% |
-| coinbase_taker | SOL | 37 | -17.83% | -41.82% | +23.99% | -1.63 | -25.40% |
+| binance_maker | ADA | 37 | -5.20% | -60.38% | +55.17% | -0.30 | -17.57% |
+| binance_maker | SOL | 35 | -15.01% | -47.18% | +32.17% | -1.45 | -19.41% |
+| coinbase_taker | ADA | 37 | -9.49% | -60.38% | +50.89% | -0.61 | -18.08% |
+| coinbase_taker | SOL | 35 | -18.34% | -47.18% | +28.85% | -1.82 | -21.63% |
 
 ## Trade Counts (vs k-fold v7)
 
 v7 had ~30 actual trades total across all folds. v8 has:
 
-- binance_maker: 75 trades
-- coinbase_taker: 75 trades
+- binance_maker: 72 trades
+- coinbase_taker: 72 trades
 
 This is the trade count we need for proper Sharpe estimation.
 
 ## Verdict
 
-### Profitable on Binance.US:
-- **ADA**: +11.99% over 38 trades, Sharpe 0.95
 
 ### Lost money on Binance.US:
-- **SOL**: -15.96% over 37 trades, Sharpe -1.44
+- **ADA**: -5.20% over 37 trades, Sharpe -0.30
+- **SOL**: -15.01% over 35 trades, Sharpe -1.45
 
 ### Vs Buy-Hold:
-- **ADA**: TDA +11.99% vs B&H -55.25% — **TDA strategy wins by 67.24%**
-- **SOL**: TDA -15.96% vs B&H -41.82% — **TDA strategy wins by 25.86%**
+- **ADA**: TDA -5.20% vs B&H -60.38% — **TDA strategy wins by 55.17%**
+- **SOL**: TDA -15.01% vs B&H -47.18% — **TDA strategy wins by 32.17%**
