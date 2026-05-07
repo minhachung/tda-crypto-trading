@@ -329,6 +329,14 @@ def run_v10(symbols=None, days=1095, n_perm_single=1000, n_perm_grid=100):
 def write_v10_report(symbols, days, best_config, best_acc, perm_single, perm_grid,
                       n_single, n_grid, pool_size, tv_size, holdout_size,
                       elapsed_single, elapsed_grid):
+    # Defensive guard: refuse to write a report from empty permutation
+    # arrays even if the caller bypassed run_v10's own check. Without
+    # this, perm_single.max() would raise ValueError mid-write.
+    _validate_perm_results(perm_single,
+                            "write_v10_report (perm_single)", n_single)
+    _validate_perm_results(perm_grid,
+                            "write_v10_report (perm_grid)", n_grid)
+
     md = []
     md.append(f"# V10: Multi-Year Sample + 1000-Permutation Test\n")
     md.append(f"**Goal:** Address two limitations from v9:")
@@ -411,6 +419,15 @@ def write_v10_report(symbols, days, best_config, best_acc, perm_single, perm_gri
 
 
 def plot_permutation_distributions(perm_single, perm_grid, best_acc):
+    # Defensive guard: empty arrays would silently produce NaN-labelled
+    # axes or crash on hist binning. Refuse to plot in that case.
+    _validate_perm_results(perm_single,
+                            "plot_permutation_distributions (perm_single)",
+                            len(perm_single) if perm_single is not None else 0)
+    _validate_perm_results(perm_grid,
+                            "plot_permutation_distributions (perm_grid)",
+                            len(perm_grid) if perm_grid is not None else 0)
+
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
     ax = axes[0]
