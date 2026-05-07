@@ -11,6 +11,7 @@ import sys
 
 import numpy as np
 import pandas as pd
+import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -18,6 +19,7 @@ sys.path.insert(0, ROOT)
 from examples.run_validation_v10 import (
     weighted_accuracy,
     block_shuffle_targets_preserve_remainder,
+    _validate_perm_results,
 )
 
 
@@ -181,3 +183,135 @@ def test_block_shuffle_only_permutes_target_column():
         "close column was modified by block_shuffle"
     assert (out['timestamp'].values == original_timestamp.values).all(), \
         "timestamp column was modified by block_shuffle"
+
+
+# ============================================================
+# Empty-permutation handling
+# ============================================================
+
+def test_validate_perm_results_raises_on_empty_array():
+    """An empty permutation array would silently produce p-value = 1.0
+    via (0+1)/(0+1) and crash on .max(); the validator must turn that
+    into a clear RuntimeError before any downstream report code runs."""
+    with pytest.raises(RuntimeError, match=r"produced 0 valid"):
+        _validate_perm_results(np.array([]), "Test phase", 100)
+
+
+def test_validate_perm_results_raises_on_empty_list():
+    """A bare empty list (rather than an empty np.array) must also be
+    caught — both np.sum and len() handle it identically, and we want
+    callers that pass [] to fail with the same readable error."""
+    with pytest.raises(RuntimeError, match=r"Test phase"):
+        _validate_perm_results([], "Test phase", 50)
+
+
+def test_validate_perm_results_passes_on_nonempty():
+    """A non-empty permutation array must pass through silently."""
+    _validate_perm_results(np.array([0.5, 0.6, 0.7]), "Test phase", 3)
+    # The single-element edge case is also valid — at least one
+    # permutation succeeded, so the report can compute a p-value
+    # (even if a B=1 p-value is not particularly informative).
+    _validate_perm_results(np.array([0.5]), "Test phase", 1)
+
+
+def test_validate_perm_results_message_includes_remediation_hints():
+    """The RuntimeError message must include actionable hints about
+    why permutations may have produced zero samples."""
+    try:
+        _validate_perm_results(np.array([]), "Full-grid permutation", 100)
+    except RuntimeError as exc:
+        msg = str(exc)
+        assert "n_signals" in msg or "thresholds" in msg, (
+            f"Error message lacks remediation hints. Got: {msg}"
+        )
+        assert "0 valid" in msg
+        assert "100 attempted" in msg
+    else:
+        pytest.fail("RuntimeError was not raised")
+
+
+# ============================================================
+# Integration test: run_grid_permutation uses weighted accuracy
+# ============================================================
+
+def test_run_grid_permutation_uses_signal_weighted_accuracy(monkeypatch):
+    """Drives examples.run_validation_v10.run_grid_permutation with
+    evaluate_kfold stubbed to return a fixed fold_df where
+    signal-weighted accuracy != unweighted row mean. The recorded
+    best-of-grid accuracy must equal the WEIGHTED value, not the row
+    mean.
+
+    Will fail if a regression replaces weighted_accuracy() with
+    fold_df['direction_accuracy'].mean() in the grid permutation
+    scoring path."""
+    import examples.run_validation_v10 as v10mod
+
+    # Construct a fold_df where weighted vs unweighted mean diverge.
+    fixed_fold_df = pd.DataFrame({
+        'fold': [0, 0],
+        'symbol': ['AAA', 'BBB'],
+        'n_signals': [1000, 10],
+        'direction_accuracy': [0.50, 0.80],
+        'auc': [0.50, 0.50],
+        'tda_return_pct': [0.0, 0.0],
+        'tda_sharpe': [0.0, 0.0],
+        'tda_n_trades': [0, 0],
+        'buy_hold_return_pct': [0.0, 0.0],
+        'outperformed_bh': [False, False],
+    })
+    weighted_expected = (0.50 * 1000 + 0.80 * 10) / 1010  # ~0.5030
+    row_mean_expected = (0.50 + 0.80) / 2                  # 0.65
+    # Confound check: the fixture must distinguish the two.
+    assert abs(weighted_expected - row_mean_expected) > 0.1
+
+    # Stub evaluate_kfold to return the fixed fold_df regardless of
+    # the model_type / threshold / regime_filter combination.
+    def stub_evaluate_kfold(*args, **kwargs):
+        return fixed_fold_df.copy()
+
+    monkeypatch.setattr(v10mod, 'evaluate_kfold', stub_evaluate_kfold)
+
+    # Stub the block-shuffle and add_targets helpers so the test does
+    # not need a real DataFrame structure (timestamp column, target
+    # shifting logic, etc.).
+    def stub_shuffle(df, block_hours=168, seed=0):
+        return df.copy()
+
+    monkeypatch.setattr(v10mod, 'block_shuffle_targets_preserve_remainder',
+                          stub_shuffle)
+
+    def stub_add_targets(df, horizon=72):
+        return df.copy()
+
+    monkeypatch.setattr(v10mod, 'add_targets', stub_add_targets)
+
+    # Minimal placeholder df; stubs ignore its content.
+    fake_df = pd.DataFrame({
+        'symbol': ['AAA'] * 50 + ['BBB'] * 50,
+        'timestamp': pd.date_range('2024-01-01', periods=100, freq='h'),
+        'target': np.zeros(100),
+        'feat_1': np.zeros(100),
+        'close': 100.0 + np.arange(100) * 0.1,
+    })
+
+    n_iter = 2
+    accs = v10mod.run_grid_permutation(
+        fake_df, ['feat_1'], horizon=72, n_iter=n_iter, n_splits=2,
+    )
+
+    assert len(accs) == n_iter, (
+        f"Expected {n_iter} grid-permutation results, got {len(accs)}"
+    )
+    for i, acc in enumerate(accs):
+        assert abs(acc - weighted_expected) < 1e-9, (
+            f"Permutation {i}: recorded accuracy {acc:.6f} does not match "
+            f"the signal-weighted expectation {weighted_expected:.6f}. "
+            f"Likely regression: run_grid_permutation switched back to "
+            f"the unweighted row mean (={row_mean_expected:.6f})."
+        )
+        assert abs(acc - row_mean_expected) > 0.05, (
+            f"Permutation {i}: recorded accuracy {acc:.6f} matches the "
+            f"unweighted row mean {row_mean_expected:.6f} to within 5pp. "
+            f"This indicates the test stub did not exercise the weighted "
+            f"path."
+        )

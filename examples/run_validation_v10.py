@@ -57,6 +57,28 @@ from examples.run_validation_v9 import (
 # v10-local helpers (signal-weighted accuracy + leak-aware block shuffle)
 # ============================================================
 
+def _validate_perm_results(perm_arr, label, n_attempted):
+    """Raise RuntimeError if a permutation phase produced 0 valid samples.
+
+    Without this guard, downstream report code computes ``perm.max()``
+    on an empty array (raises ValueError) or ``perm.mean()`` on an
+    empty array (silently returns NaN with a warning), and the
+    p-value formula ``(0 + 1) / (0 + 1) = 1.0`` would mask the failure
+    as a non-significant result rather than as the methodological
+    failure it actually is.
+    """
+    if len(perm_arr) == 0:
+        raise RuntimeError(
+            f"{label} produced 0 valid accuracy samples (out of "
+            f"{n_attempted} attempted). Likely cause: every "
+            f"permutation's evaluate_kfold returned an empty fold_df, "
+            f"or every grid config had n_signals < 30. Try lowering "
+            f"probability thresholds, increasing n_splits, or "
+            f"verifying that the pooled training data has enough "
+            f"signals after the regime filter is applied."
+        )
+
+
 def weighted_accuracy(fold_df):
     """Signal-weighted accuracy across (fold, symbol) rows of ``evaluate_kfold``.
 
@@ -248,6 +270,10 @@ def run_v10(symbols=None, days=1095, n_perm_single=1000, n_perm_grid=100):
     elapsed_single = time.time() - t_start
     print(f"  Single-config permutation done in {elapsed_single/60:.1f} min")
 
+    _validate_perm_results(perm_accs_single,
+                            "Single-config permutation",
+                            n_perm_single)
+
     n_above = int(np.sum(perm_accs_single >= best_acc_real))
     p_val_single = (n_above + 1) / (len(perm_accs_single) + 1)
     print(f"  {n_above}/{len(perm_accs_single)} permutations matched real result")
@@ -263,6 +289,10 @@ def run_v10(symbols=None, days=1095, n_perm_single=1000, n_perm_grid=100):
     )
     elapsed_grid = time.time() - t_start
     print(f"  Grid permutation done in {elapsed_grid/60:.1f} min")
+
+    _validate_perm_results(perm_accs_grid,
+                            "Full-grid permutation",
+                            n_perm_grid)
 
     n_above_grid = int(np.sum(perm_accs_grid >= best_acc_real))
     p_val_grid = (n_above_grid + 1) / (len(perm_accs_grid) + 1)
