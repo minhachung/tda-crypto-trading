@@ -33,6 +33,23 @@ from src.tda_v2_features import (
 )
 from src.validation_v2 import time_series_kfold
 
+# Import v12's own add_targets so we exercise the wrapper (and not just
+# the underlying src.multi_asset_pipeline.add_targets).
+from examples.run_validation_v12 import add_targets as v12_add_targets
+
+
+def _diagram(rng, k, birth_lo=0.0, birth_hi=1.0,
+              pers_lo=0.1, pers_hi=1.5):
+    """Synthesize a valid (birth, death) diagram of length k.
+
+    Always generates death > birth via birth + persistence, so
+    no point is on the wrong side of the diagonal."""
+    if k <= 0:
+        return np.zeros((0, 2))
+    births = rng.uniform(birth_lo, birth_hi, size=k)
+    perss = rng.uniform(pers_lo, pers_hi, size=k)
+    return np.column_stack([births, births + perss])
+
 
 # ============================================================
 # Test 10: add_targets drops exactly `horizon` rows per asset
@@ -78,6 +95,58 @@ def test_add_targets_no_silent_zero_labels_on_tail():
         "any 0 indicates the tail wasn't properly dropped."
     )
     assert len(out) == 100 - horizon
+
+
+# ============================================================
+# v12-specific: test the actual v12 wrapper, not just src
+# ============================================================
+
+def test_v12_add_targets_drops_exactly_horizon_per_asset():
+    """v12.add_targets is a wrapper that hardcodes price_col='close'.
+    Verify it drops exactly `horizon` rows per asset and produces only
+    0/1 targets."""
+    df1 = _make_df(n=200, symbol='ABC')
+    df2 = _make_df(n=150, symbol='XYZ')
+    df = pd.concat([df1, df2], ignore_index=True)
+
+    horizon = 24
+    out = v12_add_targets(df, horizon=horizon)
+
+    for symbol, group in out.groupby('symbol'):
+        original_n = len(df[df['symbol'] == symbol])
+        assert len(group) == original_n - horizon, (
+            f"{symbol}: v12_add_targets dropped {original_n - len(group)} rows, "
+            f"expected exactly {horizon}"
+        )
+    assert out['target'].isin([0, 1]).all()
+
+
+def test_v12_add_targets_strictly_rising_all_ones():
+    """v12.add_targets on a strictly rising series must produce 1.0 for
+    every retained row (the bug case where the tail leaked 0 labels)."""
+    df = _make_df(n=100, symbol='ABC')
+    df = df.assign(close=np.linspace(100, 200, 100))
+    horizon = 10
+    out = v12_add_targets(df, horizon=horizon)
+    assert (out['target'] == 1).all(), (
+        "v12.add_targets on a strictly rising close series must yield all "
+        "1-targets; any 0 indicates the tail wasn't properly dropped."
+    )
+    assert len(out) == 100 - horizon
+
+
+def test_v12_add_targets_uses_close_column():
+    """v12.add_targets must hardcode price_col='close'. If a caller
+    accidentally has a non-close price column, the wrapper should still
+    use 'close' (and would raise if 'close' is missing — the contract
+    is exactly that)."""
+    df = _make_df(n=50, symbol='ABC')
+    df = df.assign(close=np.linspace(10, 20, 50))
+    out = v12_add_targets(df, horizon=5)
+    # Up direction throughout, so target should be 1.
+    assert (out['target'] == 1).all()
+    # future_return should be positive throughout.
+    assert (out['future_return'] > 0).all()
 
 
 # ============================================================
@@ -168,8 +237,11 @@ def test_imager_empty_train_diagrams_returns_zero_features():
     n_test = 3
     empty_train_h0 = [np.zeros((0, 2)) for _ in range(n_train)]
     empty_train_h1 = [np.zeros((0, 2)) for _ in range(n_train)]
-    test_h0 = [np.array([[0.1, 0.5]]) for _ in range(n_test)]
-    test_h1 = [np.array([[0.2, 0.7]]) for _ in range(n_test)]
+    rng = np.random.RandomState(0)
+    test_h0 = [_diagram(rng, 1, birth_lo=0.1, birth_hi=0.2,
+                         pers_lo=0.3, pers_hi=0.4) for _ in range(n_test)]
+    test_h1 = [_diagram(rng, 1, birth_lo=0.1, birth_hi=0.2,
+                         pers_lo=0.3, pers_hi=0.4) for _ in range(n_test)]
 
     fitter.fit(empty_train_h0, empty_train_h1)
     out = fitter.transform(test_h0, test_h1)
@@ -184,22 +256,14 @@ def test_imager_non_empty_returns_correct_shape():
     rng = np.random.RandomState(7)
     n_train = 30
     n_test = 12
-    train_h0 = [
-        np.column_stack([rng.uniform(0, 1, k), rng.uniform(0.1, 1.5, k)])
-        for k in rng.randint(1, 6, size=n_train)
-    ]
-    train_h1 = [
-        np.column_stack([rng.uniform(0, 1, k), rng.uniform(0.1, 0.9, k)])
-        for k in rng.randint(1, 4, size=n_train)
-    ]
-    test_h0 = [
-        np.column_stack([rng.uniform(0, 1, k), rng.uniform(0.1, 1.5, k)])
-        for k in rng.randint(1, 6, size=n_test)
-    ]
-    test_h1 = [
-        np.column_stack([rng.uniform(0, 1, k), rng.uniform(0.1, 0.9, k)])
-        for k in rng.randint(1, 4, size=n_test)
-    ]
+    train_h0 = [_diagram(rng, k, pers_lo=0.1, pers_hi=1.5)
+                  for k in rng.randint(1, 6, size=n_train)]
+    train_h1 = [_diagram(rng, k, pers_lo=0.1, pers_hi=0.9)
+                  for k in rng.randint(1, 4, size=n_train)]
+    test_h0 = [_diagram(rng, k, pers_lo=0.1, pers_hi=1.5)
+                 for k in rng.randint(1, 6, size=n_test)]
+    test_h1 = [_diagram(rng, k, pers_lo=0.1, pers_hi=0.9)
+                 for k in rng.randint(1, 4, size=n_test)]
 
     fitter.fit(train_h0, train_h1)
     out = fitter.transform(test_h0, test_h1)
@@ -209,23 +273,34 @@ def test_imager_non_empty_returns_correct_shape():
     assert not np.allclose(out, 0.0), \
         "Non-trivial diagrams should produce non-zero image features"
 
+    # Each diagram must be valid (death > birth).
+    for diag in train_h0 + train_h1 + test_h0 + test_h1:
+        if len(diag) > 0:
+            assert (diag[:, 1] > diag[:, 0]).all(), \
+                "Test fixture produced an invalid diagram (death <= birth)"
+
 
 def test_imager_fit_on_train_subset_transforms_unseen_test():
     """Leak-safe contract: fit on train, transform any held-out diagram
-    set, no shape drift, no exception."""
+    set, no shape drift, no exception. Uses TEST diagrams whose
+    (birth, persistence) ranges fall OUTSIDE the train ranges — common
+    in finance data where holdout volatility may exceed train ranges."""
     rng = np.random.RandomState(1)
     fitter = LeakSafePersistenceImagerFitter(resolution=8)
-    train_h0 = [np.array([[rng.uniform(), rng.uniform(0.2, 0.5)]])
-                 for _ in range(40)]
-    train_h1 = [np.array([[rng.uniform(), rng.uniform(0.2, 0.5)]])
-                 for _ in range(40)]
+
+    # Train diagrams with small persistence.
+    train_h0 = [_diagram(rng, 1, birth_lo=0.0, birth_hi=0.5,
+                           pers_lo=0.2, pers_hi=0.5) for _ in range(40)]
+    train_h1 = [_diagram(rng, 1, birth_lo=0.0, birth_hi=0.5,
+                           pers_lo=0.2, pers_hi=0.5) for _ in range(40)]
 
     fitter.fit(train_h0, train_h1)
 
-    test_h0 = [np.array([[rng.uniform(), rng.uniform(2.0, 3.0)]])
-                for _ in range(5)]
-    test_h1 = [np.array([[rng.uniform(), rng.uniform(2.0, 3.0)]])
-                for _ in range(5)]
+    # Test diagrams with persistence well above the train range.
+    test_h0 = [_diagram(rng, 1, birth_lo=0.0, birth_hi=0.5,
+                          pers_lo=2.0, pers_hi=3.0) for _ in range(5)]
+    test_h1 = [_diagram(rng, 1, birth_lo=0.0, birth_hi=0.5,
+                          pers_lo=2.0, pers_hi=3.0) for _ in range(5)]
 
     out = fitter.transform(test_h0, test_h1)
     assert out.shape == (5, 2 * 8 * 8)
