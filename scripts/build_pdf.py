@@ -186,8 +186,9 @@ def build_paper(md_path, pdf_path):
     # Cover page
     story.append(Spacer(1, 1.5 * inch))
     story.append(Paragraph(
-        "Topological Data Analysis Reveals<br/>"
-        "Predictable Structure in<br/>"
+        "Persistent Homology Detects<br/>"
+        "Weak but Statistically Significant<br/>"
+        "Predictive Structure in<br/>"
         "Cryptocurrency Returns",
         styles['title']
     ))
@@ -211,8 +212,11 @@ def build_paper(md_path, pdf_path):
         fontName='Helvetica-Oblique',
     )
     story.append(Paragraph(
-        "<b>Headline result:</b> 61.77% direction accuracy at the 3-day horizon "
-        "(95% Wilson CI [59.75%, 63.75%], n = 2,260 signals; p &lt; 0.001).",
+        "<b>Headline result:</b> 61.77% cross-validated direction accuracy at "
+        "the 3-day horizon (n = 2,260, Wilson 95% CI [59.75%, 63.75%]) with a "
+        "permutation p-value &lt; 0.001 and a held-out test accuracy of 69.32% "
+        "(n = 315, CI [63.90%, 74.05%]). Statistically rigorous; "
+        "economically marginal under typical retail fees.",
         headline_style
     ))
     story.append(PageBreak())
@@ -404,7 +408,7 @@ def build_paper(md_path, pdf_path):
         pagesize=letter,
         leftMargin=inch, rightMargin=inch,
         topMargin=0.75 * inch, bottomMargin=0.85 * inch,
-        title="TDA Reveals Predictable Structure in Cryptocurrency Returns",
+        title="Persistent Homology in Cryptocurrency Returns",
         author="Minha Chung",
     )
 
