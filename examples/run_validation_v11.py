@@ -242,7 +242,7 @@ def _momentum_signals(asset_df, lookback_hours=24, threshold_bps=20):
     return pd.DataFrame(out)
 
 
-def _vol_breakout_signals(asset_df, vol_col='realized_vol_20', z_threshold=1.5,
+def _vol_breakout_signals(asset_df, vol_col='rv_20', z_threshold=1.5,
                             lookback=100):
     """BUY when vol z-score > +z_threshold AND last bar return positive (and SELL when negative)."""
     if vol_col not in asset_df.columns:

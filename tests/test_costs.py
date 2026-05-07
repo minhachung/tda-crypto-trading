@@ -84,3 +84,28 @@ def test_lower_fees_higher_pnl():
     r_high = bt_high.run(prices, signals)
     r_low = bt_low.run(prices, signals)
     assert r_low['metrics']['final_equity'] > r_high['metrics']['final_equity']
+
+
+def test_short_flat_price_loses_to_costs():
+    """Opening and closing a short at the same price should lose fees/slippage."""
+    prices = np.array([100.0, 100.0])
+    signals = pd.DataFrame({
+        'signal': ['SELL', 'BUY'],
+        'position_size': [-0.5, 0.5],
+    })
+    bt = Backtester(initial_capital=10000, trade_fee=0.001, slippage=0.0005)
+    res = bt.run(prices, signals, allow_short=True)
+    assert res['metrics']['final_equity'] < 10000
+    assert res['trades'].iloc[0]['pnl'] < 0
+
+
+def test_short_immediate_equity_reflects_entry_costs():
+    """Short entry should not inflate equity above initial capital."""
+    prices = np.array([100.0])
+    signals = pd.DataFrame({
+        'signal': ['SELL'],
+        'position_size': [-0.5],
+    })
+    bt = Backtester(initial_capital=10000, trade_fee=0.001, slippage=0.0005)
+    res = bt.run(prices, signals, allow_short=True)
+    assert res['metrics']['final_equity'] < 10000

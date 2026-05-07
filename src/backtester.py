@@ -61,6 +61,7 @@ class Backtester:
                 trades.append({
                     'entry_idx': i, 'entry_price': exec_price, 'side': 'long',
                     'units': position_units, 'size_pct': target_size,
+                    'entry_fee': fee,
                     'exit_idx': None, 'exit_price': None, 'pnl': None, 'return_pct': None,
                 })
 
@@ -70,7 +71,8 @@ class Backtester:
                 fee = proceeds * self.trade_fee
                 cash += proceeds - fee
 
-                pnl = (exec_price - position_entry_price) * position_units - fee
+                entry_fee = trades[-1].get('entry_fee', 0.0) if trades else 0.0
+                pnl = (exec_price - position_entry_price) * position_units - fee - entry_fee
                 ret_pct = (exec_price - position_entry_price) / position_entry_price
 
                 if trades:
@@ -87,13 +89,14 @@ class Backtester:
                 exec_price = price * (1 - self.slippage)
                 trade_value = current_equity * abs(target_size)
                 fee = trade_value * self.trade_fee
-                position_units = -(trade_value - fee) / exec_price
+                position_units = -trade_value / exec_price
                 position_entry_price = exec_price
                 position_size_pct = target_size
-                cash += trade_value
+                cash += trade_value - fee
                 trades.append({
                     'entry_idx': i, 'entry_price': exec_price, 'side': 'short',
                     'units': position_units, 'size_pct': target_size,
+                    'entry_fee': fee,
                     'exit_idx': None, 'exit_price': None, 'pnl': None, 'return_pct': None,
                 })
 
@@ -103,7 +106,8 @@ class Backtester:
                 fee = cost * self.trade_fee
                 cash -= cost + fee
 
-                pnl = (position_entry_price - exec_price) * abs(position_units) - fee
+                entry_fee = trades[-1].get('entry_fee', 0.0) if trades else 0.0
+                pnl = (position_entry_price - exec_price) * abs(position_units) - fee - entry_fee
                 ret_pct = (position_entry_price - exec_price) / position_entry_price
 
                 if trades:
@@ -121,21 +125,25 @@ class Backtester:
         if position_units != 0:
             final_price = prices[-1]
             if position_units > 0:
-                proceeds = position_units * final_price * (1 - self.slippage)
+                exec_price = final_price * (1 - self.slippage)
+                proceeds = position_units * exec_price
                 fee = proceeds * self.trade_fee
                 cash += proceeds - fee
-                pnl = (final_price - position_entry_price) * position_units - fee
-                ret_pct = (final_price - position_entry_price) / position_entry_price
+                entry_fee = trades[-1].get('entry_fee', 0.0) if trades else 0.0
+                pnl = (exec_price - position_entry_price) * position_units - fee - entry_fee
+                ret_pct = (exec_price - position_entry_price) / position_entry_price
             else:
-                cost = abs(position_units) * final_price * (1 + self.slippage)
+                exec_price = final_price * (1 + self.slippage)
+                cost = abs(position_units) * exec_price
                 fee = cost * self.trade_fee
                 cash -= cost + fee
-                pnl = (position_entry_price - final_price) * abs(position_units) - fee
-                ret_pct = (position_entry_price - final_price) / position_entry_price
+                entry_fee = trades[-1].get('entry_fee', 0.0) if trades else 0.0
+                pnl = (position_entry_price - exec_price) * abs(position_units) - fee - entry_fee
+                ret_pct = (position_entry_price - exec_price) / position_entry_price
 
             if trades:
                 trades[-1].update({
-                    'exit_idx': n - 1, 'exit_price': final_price,
+                    'exit_idx': n - 1, 'exit_price': exec_price,
                     'pnl': pnl, 'return_pct': ret_pct, 'closed_at_end': True,
                 })
 

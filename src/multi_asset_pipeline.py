@@ -34,6 +34,20 @@ def normalize_features(X):
     return (X - mean) / std
 
 
+def create_causal_normalized_windows(X, window_size=20, stride=1):
+    """Create point clouds normalized only with data available at each window end."""
+    pcs, end_idx = [], []
+    for i in range(0, len(X) - window_size + 1, stride):
+        end = i + window_size
+        history = X[:end]
+        mean = history.mean(axis=0)
+        std = history.std(axis=0)
+        std[std == 0] = 1.0
+        pcs.append((X[i:end] - mean) / std)
+        end_idx.append(end - 1)
+    return pcs, end_idx
+
+
 def create_sliding_windows(X, window_size=20, stride=1):
     pcs, end_idx = [], []
     for i in range(0, len(X) - window_size + 1, stride):
@@ -57,8 +71,9 @@ def fetch_and_build_asset(symbol, days=180, interval='1h', window_size=20, strid
         return None
 
     X_tda, tda_cols = get_tda_features(df)
-    X_norm = normalize_features(X_tda)
-    pcs, end_idx = create_sliding_windows(X_norm, window_size=window_size, stride=stride)
+    pcs, end_idx = create_causal_normalized_windows(
+        X_tda, window_size=window_size, stride=stride
+    )
     print(f"  [{symbol}] Created {len(pcs)} TDA point clouds")
 
     print(f"  [{symbol}] Computing persistent homology")
@@ -105,13 +120,13 @@ def add_targets(df, horizon=1, price_col='close'):
     """Add binary direction target: 1 if up after `horizon`, else 0."""
     df = df.copy()
     if 'symbol' in df.columns:
-        df['target'] = (
-            df.groupby('symbol')[price_col]
-            .transform(lambda x: (x.shift(-horizon) > x).astype(float))
-        )
+        future_price = df.groupby('symbol')[price_col].transform(lambda x: x.shift(-horizon))
     else:
-        df['target'] = (df[price_col].shift(-horizon) > df[price_col]).astype(float)
-    return df.dropna(subset=['target']).reset_index(drop=True)
+        future_price = df[price_col].shift(-horizon)
+    df['future_price'] = future_price
+    df['future_return'] = df['future_price'] / df[price_col] - 1.0
+    df['target'] = np.where(df['future_price'].notna(), df['future_price'] > df[price_col], np.nan)
+    return df.dropna(subset=['target', 'future_return']).reset_index(drop=True)
 
 
 # ============================================================

@@ -65,13 +65,10 @@ def make_classifier(random_state=42):
 
 def add_targets(df, horizon=168, price_col='close'):
     df = df.copy().sort_values(['symbol', 'timestamp']).reset_index(drop=True)
-    df['target'] = df.groupby('symbol')[price_col].transform(
-        lambda x: (x.shift(-horizon) > x).astype(float)
-    )
-    df['future_return'] = df.groupby('symbol')[price_col].transform(
-        lambda x: x.shift(-horizon) / x - 1.0
-    )
-    return df
+    df['future_price'] = df.groupby('symbol')[price_col].transform(lambda x: x.shift(-horizon))
+    df['future_return'] = df['future_price'] / df[price_col] - 1.0
+    df['target'] = np.where(df['future_price'].notna(), df['future_price'] > df[price_col], np.nan)
+    return df.dropna(subset=['target', 'future_return']).reset_index(drop=True)
 
 
 class ContinuousBacktester:
@@ -120,8 +117,12 @@ class ContinuousBacktester:
 
         for t in range(warmup_steps, n):
             if t - last_train_step >= self.retrain_freq:
-                X_train = X_all[:t]
-                y_train = targets[:t]
+                train_end = t - self.horizon
+                if train_end <= 0:
+                    equity_curve[t] = cash + position_units * prices[t]
+                    continue
+                X_train = X_all[:train_end]
+                y_train = targets[:train_end]
                 valid = ~np.any(np.isnan(X_train), axis=1) & ~np.isnan(y_train)
                 X_train, y_train = X_train[valid], y_train[valid].astype(int)
                 if len(np.unique(y_train)) >= 2 and len(X_train) >= 100:
@@ -138,12 +139,14 @@ class ContinuousBacktester:
                     proceeds = position_units * exec_price
                     fee_paid = proceeds * self.fee
                     cash += proceeds - fee_paid
-                    pnl = (exec_price - position_entry_price) * position_units - fee_paid
+                    entry_fee = trades[-1].get('entry_fee', 0.0) if trades else 0.0
+                    pnl = (exec_price - position_entry_price) * position_units - fee_paid - entry_fee
                 else:
                     cost = abs(position_units) * exec_price
                     fee_paid = cost * self.fee
                     cash -= cost + fee_paid
-                    pnl = (position_entry_price - exec_price) * abs(position_units) - fee_paid
+                    entry_fee = trades[-1].get('entry_fee', 0.0) if trades else 0.0
+                    pnl = (position_entry_price - exec_price) * abs(position_units) - fee_paid - entry_fee
 
                 if trades and trades[-1]['exit_step'] is None:
                     trades[-1].update({
@@ -182,6 +185,7 @@ class ContinuousBacktester:
                             'units': position_units,
                             'size_pct': size_pct,
                             'p_up_at_entry': p_up,
+                            'entry_fee': fee_paid,
                             'exit_step': None,
                         })
 
@@ -190,11 +194,11 @@ class ContinuousBacktester:
                         exec_price = current_price * (1 - self.slippage)
                         trade_value = current_equity * size_pct
                         fee_paid = trade_value * self.fee
-                        position_units = -(trade_value - fee_paid) / exec_price
+                        position_units = -trade_value / exec_price
                         position_entry_price = exec_price
                         position_close_step = t + self.horizon
                         signal_at_open = 'SELL'
-                        cash += trade_value
+                        cash += trade_value - fee_paid
                         trades.append({
                             'entry_step': t,
                             'entry_price': exec_price,
@@ -203,6 +207,7 @@ class ContinuousBacktester:
                             'units': position_units,
                             'size_pct': size_pct,
                             'p_up_at_entry': p_up,
+                            'entry_fee': fee_paid,
                             'exit_step': None,
                         })
 
@@ -213,7 +218,9 @@ class ContinuousBacktester:
             if position_units > 0:
                 cash += position_units * final_price * (1 - self.slippage) * (1 - self.fee)
             else:
-                cash += position_units * final_price * (1 + self.slippage) * (1 + self.fee)
+                exec_price = final_price * (1 + self.slippage)
+                cost = abs(position_units) * exec_price
+                cash -= cost + cost * self.fee
             equity_curve[-1] = cash
 
         trades_df = pd.DataFrame(trades) if trades else pd.DataFrame()

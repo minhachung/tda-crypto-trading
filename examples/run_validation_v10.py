@@ -60,7 +60,7 @@ def run_single_config_permutation(train_val_df, feature_cols, model_type, thresh
         df_shuffled = block_shuffle_targets(df_t, seed=it)
         fold_df = evaluate_kfold(
             df_shuffled, feature_cols, model_type, threshold,
-            n_splits=n_splits, regime_filter=regime_filter,
+            n_splits=n_splits, horizon=horizon, regime_filter=regime_filter,
         )
         if len(fold_df) > 0:
             accs.append(float(fold_df['direction_accuracy'].mean()))
@@ -82,7 +82,7 @@ def run_grid_permutation(train_val_df, feature_cols, horizon, n_iter, n_splits=5
                 for filt in [None, {'vol': 'median'}]:
                     fold_df = evaluate_kfold(
                         df_shuffled, feature_cols, model_type, thresh,
-                        n_splits=n_splits, regime_filter=filt,
+                        n_splits=n_splits, horizon=horizon, regime_filter=filt,
                     )
                     if len(fold_df) > 0 and fold_df['n_signals'].sum() >= 30:
                         acc = float(fold_df['direction_accuracy'].mean())
@@ -130,7 +130,7 @@ def run_v10(symbols=None, days=1095, n_perm_single=1000, n_perm_grid=100):
             for filt in [None, {'vol': 'median'}]:
                 fold_df = evaluate_kfold(
                     train_val_targeted, feature_cols, model_type, thresh,
-                    n_splits=5, regime_filter=filt,
+                    n_splits=5, horizon=horizon, regime_filter=filt,
                 )
                 if len(fold_df) == 0 or fold_df['n_signals'].sum() < 30:
                     continue

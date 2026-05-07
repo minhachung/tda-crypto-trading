@@ -125,13 +125,10 @@ def temporal_split(pooled_df, train_val_pct=0.80):
 
 def add_targets(df, horizon=72):
     df = df.copy().sort_values(['symbol', 'timestamp']).reset_index(drop=True)
-    df['target'] = df.groupby('symbol')['close'].transform(
-        lambda x: (x.shift(-horizon) > x).astype(float)
-    )
-    df['future_return'] = df.groupby('symbol')['close'].transform(
-        lambda x: x.shift(-horizon) / x - 1.0
-    )
-    return df
+    df['future_price'] = df.groupby('symbol')['close'].transform(lambda x: x.shift(-horizon))
+    df['future_return'] = df['future_price'] / df['close'] - 1.0
+    df['target'] = np.where(df['future_price'].notna(), df['future_price'] > df['close'], np.nan)
+    return df.dropna(subset=['target', 'future_return']).reset_index(drop=True)
 
 
 def make_classifier(model_type='rf', random_state=42):
@@ -167,6 +164,7 @@ def signals_from_proba(proba, prob_threshold, max_position_size=0.10):
 
 
 def evaluate_kfold(df, feature_cols, model_type, prob_threshold, n_splits=5,
+                   horizon=1,
                    regime_filter=None, shuffle_tda=False, tda_cols=None):
     """K-fold within Train+Val. Used for grid search and ablation."""
     symbols = df['symbol'].unique().tolist()
@@ -188,7 +186,10 @@ def evaluate_kfold(df, feature_cols, model_type, prob_threshold, n_splits=5,
             asset_df, folds = asset_folds[symbol]
             if fold_idx >= len(folds):
                 continue
-            tr_idx, _ = folds[fold_idx]
+            tr_idx, te_idx = folds[fold_idx]
+            tr_idx = tr_idx[tr_idx + horizon < te_idx[0]]
+            if len(tr_idx) == 0:
+                continue
             X_block = asset_df.iloc[tr_idx][feature_cols].values.copy()
             if shuffle_tda and tda_cols:
                 tda_idx = [feature_cols.index(c) for c in tda_cols if c in feature_cols]
@@ -279,7 +280,7 @@ def evaluate_kfold(df, feature_cols, model_type, prob_threshold, n_splits=5,
     return pd.DataFrame(rows)
 
 
-def grid_search_kfold(df, all_feature_cols, n_splits=5, configs=None):
+def grid_search_kfold(df, all_feature_cols, n_splits=5, configs=None, horizon=1):
     """Standard grid search on Train+Val."""
     if configs is None:
         configs = [
@@ -291,7 +292,8 @@ def grid_search_kfold(df, all_feature_cols, n_splits=5, configs=None):
     for model_type, thresh, filt in configs:
         try:
             fold_df = evaluate_kfold(df, all_feature_cols, model_type, thresh,
-                                      n_splits=n_splits, regime_filter=filt)
+                                      n_splits=n_splits, horizon=horizon,
+                                      regime_filter=filt)
             if len(fold_df) == 0:
                 continue
             n_sig = int(fold_df['n_signals'].sum())
@@ -335,7 +337,7 @@ def run_ablation(train_val_df, all_features, horizon=72,
         fold_df = evaluate_kfold(
             df_targeted, cols,
             model_type=model_type, prob_threshold=threshold,
-            n_splits=n_splits, regime_filter={'vol': 'median'},
+            n_splits=n_splits, horizon=horizon, regime_filter={'vol': 'median'},
             shuffle_tda=shuffle_tda, tda_cols=tda_cols if shuffle_tda else None,
         )
         if len(fold_df) == 0:
@@ -406,7 +408,7 @@ def run_permutation_test(train_val_df, all_features, horizon=72, n_iter=30,
         fold_df = evaluate_kfold(
             df_shuffled, all_features,
             model_type=model_type, prob_threshold=threshold,
-            n_splits=n_splits, regime_filter={'vol': 'median'},
+            n_splits=n_splits, horizon=horizon, regime_filter={'vol': 'median'},
         )
         if len(fold_df) > 0:
             perm_accs.append(float(fold_df['direction_accuracy'].mean()))
@@ -508,7 +510,7 @@ def break_even_analysis(train_val_df, all_features, horizons=(1, 4, 12, 24, 72, 
     for h in horizons:
         df_t = add_targets(train_val_df, horizon=h)
         fold_df = evaluate_kfold(df_t, all_features, model_type, threshold,
-                                  regime_filter={'vol': 'median'})
+                                  horizon=h, regime_filter={'vol': 'median'})
         if len(fold_df) == 0:
             continue
         df_t = df_t.dropna(subset=['future_return'])
@@ -616,7 +618,7 @@ def run_v9(symbols=None, days=365, horizon=72, n_perm=30):
 
     print(f"\n[3/6] Grid search on Train+Val (no holdout leak)...")
     train_val_targeted = add_targets(train_val_df, horizon=horizon)
-    grid_df = grid_search_kfold(train_val_targeted, feature_cols)
+    grid_df = grid_search_kfold(train_val_targeted, feature_cols, horizon=horizon)
     if len(grid_df) == 0:
         print("  No valid configs found!")
         return None
