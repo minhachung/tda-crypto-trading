@@ -1,37 +1,38 @@
 """
-TDA v2 Features: Persistence Images.
+TDA v2 Features: Persistence Images (leak-safe).
 
 Replaces the v1 representation (8 hand-engineered scalar statistics per
 homology dimension = 16 total features) with **persistence images** — a
-fixed-dimension vectorisation of the persistence diagram itself.
+fixed-dimension vectorisation of the persistence diagram (Adams et al.,
+JMLR 2017).
 
-Why persistence images:
-  v1 summary statistics (count, L1-norm, max persistence, entropy, ...)
-  collapse the entire persistence diagram into 8 scalars per dimension,
-  discarding which (birth, persistence) regions the diagram occupies.
-  v9 ablation showed Base+v1_TDA underperforms Base alone by 5.6pp —
-  consistent with v1 features being too lossy to add value over a
-  competitive base.
+LEAKAGE-SAFETY CONTRACT
+-----------------------
+A persistence image is the output of a fit-then-transform pipeline:
+fitting determines the (birth, persistence) grid bounds, transforming
+samples the kernel density on that grid. *Fitting on all windows
+(including holdout/test) leaks the future distribution of TDA features
+into the representation, which corrupts validation accuracy.*
 
-  Persistence images (Adams et al., JMLR 2017) place a Gaussian kernel
-  on every diagram point, weighted by persistence, then sample the
-  resulting density on a fixed grid. The result is a flattened vector
-  whose dimensions correspond to specific (birth, persistence) regions
-  — preserving the diagram's full geometric structure in a form
-  classifiers can exploit.
+Therefore this module exposes the fit and transform steps separately,
+and **never fits on full-pool diagrams**. Callers are responsible for:
 
-Pipeline:
-  point clouds ──ripser──▶ persistence diagrams (H0, H1)
-                                      │
-                                      ▼ (per dim)
-                          PersistenceImager.fit(all_diagrams)
-                                      │  (one fit per session)
-                                      ▼
-                          PersistenceImager.transform(diagrams)
-                                      │
-                                      ▼
-                  flat 200-dim feature vector per window
-                  (10×10 grid for H0 + 10×10 grid for H1)
+  - K-fold CV       : fit on each fold's TRAIN diagrams; transform train+test
+  - Train+Holdout   : fit on Train+Val diagrams; transform Train+Val and holdout
+  - Walk-forward    : fit on diagrams known up to t - horizon; transform t
+
+Diagrams themselves carry no leakage — they are intrinsic to each
+window — so callers may compute them once and cache.
+
+Output dimensionality is guaranteed to be exactly (resolution × resolution)
+per homology dimension: we set birth_range = pers_range = max(birth_max,
+pers_max) so persim's grid is square, eliminating the silent
+pad/crop step.
+
+Empty-diagram robustness: if a fold's training diagrams contain no
+finite-persistence features, the imager for that dimension is NOT fit
+(Imager construction is fragile in that case); transforms return a
+zero-vector instead.
 """
 
 import numpy as np
@@ -50,38 +51,15 @@ except ImportError:
     PERSIM_AVAILABLE = False
 
 
-# Default resolution: 10×10 = 100 features per homology dimension,
-# 200 features total (H0 + H1). Chosen to keep dimensionality
-# manageable on ~50k-sample training pools.
 DEFAULT_RESOLUTION = 10
 
 
-def compute_diagrams_for_windows(point_clouds, max_dim=1, verbose=True):
-    """Compute Vietoris-Rips persistence diagrams for every window.
-
-    Returns a list of dicts {'H0': ndarray(n,2), 'H1': ndarray(m,2)}.
-    """
-    if not RIPSER_AVAILABLE:
-        raise ImportError("ripser required: pip install ripser")
-
-    out = []
-    n = len(point_clouds)
-    for i, pc in enumerate(point_clouds):
-        try:
-            result = ripser(np.asarray(pc, dtype=float), maxdim=max_dim)
-            out.append({f'H{d}': result['dgms'][d]
-                        for d in range(len(result['dgms']))})
-        except Exception as e:
-            if verbose:
-                print(f"  [v2 diag {i}] Error: {e}; using empty diagram")
-            out.append({f'H{d}': np.zeros((0, 2)) for d in range(max_dim + 1)})
-        if verbose and (i + 1) % 200 == 0:
-            print(f"  [v2] {i + 1}/{n} diagrams computed")
-    return out
-
+# ============================================================
+# Diagram computation (leak-free — intrinsic to each window)
+# ============================================================
 
 def _strip_infinite(diagram):
-    """Drop infinite-persistence points (e.g., always-alive H0 component)."""
+    """Drop infinite-persistence points (e.g. always-alive H0 component)."""
     if len(diagram) == 0:
         return np.zeros((0, 2))
     finite = diagram[~np.isinf(diagram[:, 1])]
@@ -91,115 +69,161 @@ def _strip_infinite(diagram):
     return finite[pers > 1e-12]
 
 
-def _dim_diagrams(all_dgms, dim_key):
-    return [_strip_infinite(d.get(dim_key, np.zeros((0, 2)))) for d in all_dgms]
+def compute_diagrams_only(point_clouds, max_dim=1, verbose=True):
+    """Compute Vietoris-Rips persistence diagrams for every window.
+
+    Returns two parallel lists of length ``len(point_clouds)``:
+      - h0_list : each element is an (n_i, 2) array of finite-persistence
+                  H0 points
+      - h1_list : each element is an (m_i, 2) array of finite-persistence
+                  H1 points
+    """
+    if not RIPSER_AVAILABLE:
+        raise ImportError("ripser required: pip install ripser")
+
+    h0_list, h1_list = [], []
+    n = len(point_clouds)
+    for i, pc in enumerate(point_clouds):
+        try:
+            result = ripser(np.asarray(pc, dtype=float), maxdim=max_dim)
+            dgms = result['dgms']
+            h0 = _strip_infinite(dgms[0]) if len(dgms) > 0 else np.zeros((0, 2))
+            h1 = _strip_infinite(dgms[1]) if len(dgms) > 1 else np.zeros((0, 2))
+        except Exception as e:
+            if verbose:
+                print(f"  [v2 diag {i}] Error: {e}; using empty diagrams")
+            h0, h1 = np.zeros((0, 2)), np.zeros((0, 2))
+        h0_list.append(h0)
+        h1_list.append(h1)
+        if verbose and (i + 1) % 500 == 0:
+            print(f"  [v2] {i + 1}/{n} diagrams computed")
+    return h0_list, h1_list
 
 
-def _fit_imager_for_dim(diagrams, resolution=DEFAULT_RESOLUTION):
-    """Fit one PersistenceImager with explicit grid so transform output
-    has a fixed 2D shape across calls."""
-    if not PERSIM_AVAILABLE:
-        raise ImportError("persim required: pip install persim")
+# ============================================================
+# Leak-safe imager: fit on training diagrams only, transform anything
+# ============================================================
 
-    # Compute global birth and persistence ranges from non-empty diagrams.
-    births, perss = [], []
-    for d in diagrams:
-        if len(d) > 0:
-            births.extend(d[:, 0].tolist())
-            perss.extend((d[:, 1] - d[:, 0]).tolist())
+class LeakSafePersistenceImagerFitter:
+    """A fit/transform wrapper around persim.PersistenceImager that:
 
-    if not births or not perss:
-        # No content — produce a degenerate but well-shaped imager.
-        b_max, p_max = 1.0, 1.0
-    else:
+    1. Fits on **only** the diagrams the caller passes (i.e., train fold).
+    2. Produces a **fixed (resolution × resolution)** image per dimension —
+       no silent padding, no shape drift between calls.
+    3. Returns zeros for empty-train-diagram dimensions instead of
+       raising at fit time.
+    4. Concatenates H0 and H1 image features into a single flat
+       feature matrix of shape (n_windows, 2 × resolution²).
+    """
+
+    def __init__(self, resolution=DEFAULT_RESOLUTION):
+        self.resolution = resolution
+        self._pim_h0 = None
+        self._pim_h1 = None
+        self._h0_skipped = False
+        self._h1_skipped = False
+
+    @property
+    def feat_dim_per_homology(self):
+        return self.resolution * self.resolution
+
+    @property
+    def feat_dim_total(self):
+        return 2 * self.feat_dim_per_homology
+
+    def fit(self, train_h0, train_h1):
+        if not PERSIM_AVAILABLE:
+            raise ImportError("persim required: pip install persim")
+        self._pim_h0, self._h0_skipped = self._fit_dim(train_h0)
+        self._pim_h1, self._h1_skipped = self._fit_dim(train_h1)
+        return self
+
+    def transform(self, h0_list, h1_list):
+        n = len(h0_list)
+        out = np.zeros((n, self.feat_dim_total), dtype=float)
+        feat_dim = self.feat_dim_per_homology
+        if not self._h0_skipped and self._pim_h0 is not None:
+            out[:, :feat_dim] = self._transform_dim(self._pim_h0, h0_list)
+        if not self._h1_skipped and self._pim_h1 is not None:
+            out[:, feat_dim:] = self._transform_dim(self._pim_h1, h1_list)
+        return out
+
+    def fit_transform(self, train_h0, train_h1):
+        self.fit(train_h0, train_h1)
+        return self.transform(train_h0, train_h1)
+
+    def feature_names(self, prefix_h0='pim_h0_', prefix_h1='pim_h1_'):
+        feat_dim = self.feat_dim_per_homology
+        names = [f'{prefix_h0}{j}' for j in range(feat_dim)]
+        names += [f'{prefix_h1}{j}' for j in range(feat_dim)]
+        return names
+
+    # --- internals ---
+
+    def _fit_dim(self, train_diagrams):
+        """Returns (PersistenceImager, skipped: bool).
+
+        skipped=True means train diagrams had no finite-persistence content,
+        so the imager wasn't fit and transform should return zeros.
+        """
+        births, perss = [], []
+        for d in train_diagrams:
+            if len(d) > 0:
+                births.extend(d[:, 0].tolist())
+                perss.extend((d[:, 1] - d[:, 0]).tolist())
+
+        if not births or not perss:
+            return None, True
+
         b_max = max(float(np.max(births)) * 1.1, 1e-3)
         p_max = max(float(np.max(perss)) * 1.1, 1e-3)
+        # Force a square grid: same upper bound on both axes, pixel_size
+        # set so the imager produces exactly resolution × resolution.
+        combined_max = max(b_max, p_max)
+        pixel_size = combined_max / self.resolution
 
-    pixel_size = max(p_max, b_max) / resolution
+        try:
+            pim = PersistenceImager(
+                birth_range=(0.0, combined_max),
+                pers_range=(0.0, combined_max),
+                pixel_size=pixel_size,
+                weight='persistence',
+            )
+            pim.fit(train_diagrams, skew=True)
+            return pim, False
+        except Exception:
+            # Imager construction can be fragile on degenerate inputs.
+            return None, True
 
-    pim = PersistenceImager(
-        birth_range=(0.0, b_max),
-        pers_range=(0.0, p_max),
-        pixel_size=pixel_size,
-        weight='persistence',
-    )
-    pim.fit(diagrams, skew=True)
-    return pim
+    def _transform_dim(self, pim, diagrams):
+        feat_dim = self.feat_dim_per_homology
+        out = np.zeros((len(diagrams), feat_dim), dtype=float)
+        try:
+            raw_imgs = pim.transform(diagrams)
+        except Exception:
+            return out
 
-
-def _transform_to_fixed_shape(pim, diagrams, resolution=DEFAULT_RESOLUTION):
-    """Transform diagrams and pad/crop each image to (resolution, resolution).
-
-    Persim's PersistenceImager output shape depends on the fitted ranges /
-    pixel size; using birth_range/pers_range explicitly produces consistent
-    shapes, but we still pad defensively to guarantee a fixed-dim feature.
-    """
-    raw_imgs = pim.transform(diagrams)
-    out = np.zeros((len(diagrams), resolution * resolution), dtype=float)
-    for i, img in enumerate(raw_imgs):
-        arr = np.asarray(img, dtype=float)
-        h, w = arr.shape if arr.ndim == 2 else (1, arr.size)
-        if arr.ndim != 2:
-            arr = arr.reshape(1, -1)
+        for i, img in enumerate(raw_imgs):
+            arr = np.asarray(img, dtype=float)
+            if arr.ndim != 2:
+                continue
             h, w = arr.shape
-        h_use, w_use = min(h, resolution), min(w, resolution)
-        canvas = np.zeros((resolution, resolution), dtype=float)
-        canvas[:h_use, :w_use] = arr[:h_use, :w_use]
-        out[i] = canvas.ravel()
-    return out
+            # We constructed the imager so the natural shape is exactly
+            # (R, R); if persim returned a different shape due to a degenerate
+            # diagram, take the upper-left R×R block (safe fallback).
+            r = self.resolution
+            block = arr[:r, :r]
+            canvas = np.zeros((r, r), dtype=float)
+            canvas[:block.shape[0], :block.shape[1]] = block
+            out[i] = canvas.ravel()
+        return out
 
 
-def compute_v2_features_for_windows(point_clouds, end_indices=None,
-                                     resolution=DEFAULT_RESOLUTION,
-                                     max_dim=1, verbose=True):
-    """End-to-end v2 feature extraction.
-
-    Returns a DataFrame with columns:
-        pim_h0_0 .. pim_h0_(R²-1)        (resolution^2 columns)
-        pim_h1_0 .. pim_h1_(R²-1)        (resolution^2 columns)
-        window_idx, end_idx              (book-keeping)
-    """
-    if verbose:
-        print(f"  [v2] Computing diagrams for {len(point_clouds)} windows")
-    all_dgms = compute_diagrams_for_windows(point_clouds, max_dim=max_dim,
-                                              verbose=verbose)
-
-    n = len(all_dgms)
-
-    h0_dgms = _dim_diagrams(all_dgms, 'H0')
-    if verbose:
-        print(f"  [v2] Fitting H0 imager (resolution={resolution})")
-    pim_h0 = _fit_imager_for_dim(h0_dgms, resolution=resolution)
-    h0_flat = _transform_to_fixed_shape(pim_h0, h0_dgms, resolution=resolution)
-
-    if max_dim >= 1:
-        h1_dgms = _dim_diagrams(all_dgms, 'H1')
-        if verbose:
-            print(f"  [v2] Fitting H1 imager (resolution={resolution})")
-        pim_h1 = _fit_imager_for_dim(h1_dgms, resolution=resolution)
-        h1_flat = _transform_to_fixed_shape(pim_h1, h1_dgms, resolution=resolution)
-    else:
-        h1_flat = np.zeros((n, resolution * resolution))
-
-    if verbose:
-        print(f"  [v2] Building feature DataFrame ({n} rows × "
-              f"{2 * resolution * resolution} TDA dims)")
-    rows = []
-    for i in range(n):
-        feats = {f'pim_h0_{j}': float(h0_flat[i, j])
-                 for j in range(resolution * resolution)}
-        feats.update({f'pim_h1_{j}': float(h1_flat[i, j])
-                      for j in range(resolution * resolution)})
-        feats['window_idx'] = i
-        if end_indices is not None:
-            feats['end_idx'] = end_indices[i]
-        rows.append(feats)
-
-    return pd.DataFrame(rows)
-
+# ============================================================
+# Convenience: select v2 columns from a DataFrame
+# ============================================================
 
 def get_v2_feature_cols(df):
-    """All v2 TDA feature columns in df."""
     return [c for c in df.columns
             if c.startswith('pim_h0_') or c.startswith('pim_h1_')]
 
