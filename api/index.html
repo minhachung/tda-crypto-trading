@@ -1,0 +1,3309 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Topological Data Analysis for cryptocurrency direction prediction">
+      
+      
+        <meta name="author" content="Minha Chung">
+      
+      
+        <link rel="canonical" href="https://minhachung.github.io/tda-crypto-trading/api/">
+      
+      
+        <link rel="prev" href="../validation/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>API Reference - TDA-Crypto-Trading</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#api-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="TDA-Crypto-Trading" class="md-header__button md-logo" aria-label="TDA-Crypto-Trading" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m3.5 18.5 6-6 4 4L22 6.92 20.59 5.5l-7.09 8-4-4L2 17z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            TDA-Crypto-Trading
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              API Reference
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/minhachung/tda-crypto-trading" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    minhachung/tda-crypto-trading
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../tutorial/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Tutorial
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../validation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Validation Methodology
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  API Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../results/RESULTS.md" class="md-tabs__link">
+          
+  
+  
+  Paper
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="TDA-Crypto-Trading" class="md-nav__button md-logo" aria-label="TDA-Crypto-Trading" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m3.5 18.5 6-6 4 4L22 6.92 20.59 5.5l-7.09 8-4-4L2 17z"/></svg>
+
+    </a>
+    TDA-Crypto-Trading
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/minhachung/tda-crypto-trading" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    minhachung/tda-crypto-trading
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation Methodology
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#src.persistent_homology" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        persistent_homology
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="persistent_homology">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.persistent_homology.PersistentHomologyAnalyzer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PersistentHomologyAnalyzer
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PersistentHomologyAnalyzer">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.persistent_homology.PersistentHomologyAnalyzer.__init__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.persistent_homology.PersistentHomologyAnalyzer.compute" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        compute
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.persistent_homology.PersistentHomologyAnalyzer.extract_features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        extract_features
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.persistent_homology.compute_features_for_windows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        compute_features_for_windows
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.persistent_homology.run_persistence_pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run_persistence_pipeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.advanced_features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        advanced_features
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="advanced_features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.advanced_features.build_advanced_features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        build_advanced_features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.advanced_features.garman_klass_volatility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        garman_klass_volatility
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.advanced_features.parkinson_volatility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        parkinson_volatility
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.advanced_features.get_tda_features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_tda_features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.advanced_features.get_ml_features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_ml_features
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.binance_data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        binance_data
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="binance_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.binance_data.HighFreqFetcher" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HighFreqFetcher
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="HighFreqFetcher">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.binance_data.HighFreqFetcher.fetch_history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fetch_history
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.binance_data.run_hf_pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run_hf_pipeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.multi_asset_pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        multi_asset_pipeline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="multi_asset_pipeline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.multi_asset_pipeline.fetch_multi_asset_pool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fetch_multi_asset_pool
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.multi_asset_pipeline.get_combined_feature_cols" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_combined_feature_cols
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.ml_signals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ml_signals
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ml_signals">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.ml_signals.MLSignalGenerator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MLSignalGenerator
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MLSignalGenerator">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.ml_signals.MLSignalGenerator.__init__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.ml_signals.MLSignalGenerator.fit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.ml_signals.MLSignalGenerator.predict_proba" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        predict_proba
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.ml_signals.MLSignalGenerator.generate_signals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        generate_signals
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.ml_signals.grid_search_ml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        grid_search_ml
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.ml_signals.evaluate_ml_kfold" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        evaluate_ml_kfold
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.validation_v2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        validation_v2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="validation_v2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.validation_v2.wilson_interval" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        wilson_interval
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.validation_v2.time_series_kfold" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        time_series_kfold
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.validation_v2.bootstrap_metric" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        bootstrap_metric
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.validation_v2.run_validation_v2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run_validation_v2
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.regime_filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        regime_filter
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="regime_filter">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.regime_filter.apply_regime_filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        apply_regime_filter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.regime_filter.vol_regime_mask" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        vol_regime_mask
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.backtester" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        backtester
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="backtester">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.backtester.Backtester" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backtester
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Backtester">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.backtester.Backtester.run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.backtester.format_metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        format_metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.backtester.run_backtest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run_backtest
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Paper
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Paper
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../results/RESULTS.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../VALIDATION_PROGRESSION.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation Progression
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#src.persistent_homology" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        persistent_homology
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="persistent_homology">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.persistent_homology.PersistentHomologyAnalyzer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PersistentHomologyAnalyzer
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PersistentHomologyAnalyzer">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.persistent_homology.PersistentHomologyAnalyzer.__init__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.persistent_homology.PersistentHomologyAnalyzer.compute" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        compute
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.persistent_homology.PersistentHomologyAnalyzer.extract_features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        extract_features
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.persistent_homology.compute_features_for_windows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        compute_features_for_windows
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.persistent_homology.run_persistence_pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run_persistence_pipeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.advanced_features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        advanced_features
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="advanced_features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.advanced_features.build_advanced_features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        build_advanced_features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.advanced_features.garman_klass_volatility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        garman_klass_volatility
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.advanced_features.parkinson_volatility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        parkinson_volatility
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.advanced_features.get_tda_features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_tda_features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.advanced_features.get_ml_features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_ml_features
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.binance_data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        binance_data
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="binance_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.binance_data.HighFreqFetcher" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HighFreqFetcher
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="HighFreqFetcher">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.binance_data.HighFreqFetcher.fetch_history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fetch_history
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.binance_data.run_hf_pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run_hf_pipeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.multi_asset_pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        multi_asset_pipeline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="multi_asset_pipeline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.multi_asset_pipeline.fetch_multi_asset_pool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fetch_multi_asset_pool
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.multi_asset_pipeline.get_combined_feature_cols" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_combined_feature_cols
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.ml_signals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ml_signals
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ml_signals">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.ml_signals.MLSignalGenerator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MLSignalGenerator
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MLSignalGenerator">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.ml_signals.MLSignalGenerator.__init__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __init__
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.ml_signals.MLSignalGenerator.fit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.ml_signals.MLSignalGenerator.predict_proba" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        predict_proba
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.ml_signals.MLSignalGenerator.generate_signals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        generate_signals
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.ml_signals.grid_search_ml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        grid_search_ml
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.ml_signals.evaluate_ml_kfold" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        evaluate_ml_kfold
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.validation_v2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        validation_v2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="validation_v2">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.validation_v2.wilson_interval" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        wilson_interval
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.validation_v2.time_series_kfold" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        time_series_kfold
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.validation_v2.bootstrap_metric" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        bootstrap_metric
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.validation_v2.run_validation_v2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run_validation_v2
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.regime_filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        regime_filter
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="regime_filter">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.regime_filter.apply_regime_filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        apply_regime_filter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.regime_filter.vol_regime_mask" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        vol_regime_mask
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#src.backtester" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        backtester
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="backtester">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.backtester.Backtester" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backtester
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Backtester">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#src.backtester.Backtester.run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.backtester.format_metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        format_metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#src.backtester.run_backtest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run_backtest
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="api-reference">API Reference</h1>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="src.persistent_homology" class="doc doc-heading">
+            <code>src.persistent_homology</code>
+
+
+</h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Persistent Homology: Compute topological features from point clouds.</p>
+<p>Uses Ripser to compute persistence diagrams, then extracts trading-relevant
+features (C1-norm, L1-norm, entropy, feature count, max persistence).</p>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="src.persistent_homology.PersistentHomologyAnalyzer" class="doc doc-heading">
+            <code>PersistentHomologyAnalyzer</code>
+
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+
+
+        <p>Compute persistent homology and extract topological features.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.persistent_homology.PersistentHomologyAnalyzer.__init__" class="doc doc-heading">
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">point_cloud</span><span class="p">,</span> <span class="n">max_dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>point_cloud</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>(n_points, n_features) array</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_dim</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Maximum homology dimension (1 = loops, 2 = voids)</p>
+              </div>
+            </td>
+            <td>
+                  <code>1</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.persistent_homology.PersistentHomologyAnalyzer.compute" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">compute</span><span class="p">()</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Compute persistent homology via Vietoris-Rips.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.persistent_homology.PersistentHomologyAnalyzer.extract_features" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">extract_features</span><span class="p">()</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Extract trading-relevant features from persistence diagrams.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="src.persistent_homology.compute_features_for_windows" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">compute_features_for_windows</span><span class="p">(</span><span class="n">point_clouds</span><span class="p">,</span> <span class="n">end_indices</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Compute TDA features for a sequence of point clouds.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>point_clouds</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>List or array of shape (n_windows, window_size, n_features)</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>end_indices</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional list of original-data indices for each window</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_dim</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Maximum homology dimension</p>
+              </div>
+            </td>
+            <td>
+                  <code>1</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>verbose</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Print progress</p>
+              </div>
+            </td>
+            <td>
+                  <code>True</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with TDA features per window</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="src.persistent_homology.run_persistence_pipeline" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">run_persistence_pipeline</span><span class="p">(</span><span class="n">point_clouds_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">end_indices_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">symbol</span><span class="o">=</span><span class="s1">&#39;BTC&#39;</span><span class="p">,</span> <span class="n">max_dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">save_dir</span><span class="o">=</span><span class="s1">&#39;data&#39;</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>End-to-end persistence computation.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="src.advanced_features" class="doc doc-heading">
+            <code>src.advanced_features</code>
+
+
+</h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Advanced Feature Engineering for TDA Point Clouds.</p>
+<p>Replaces raw OHLCV with stationary, signal-rich features:
+  - Log returns (stationarity)
+  - Garman-Klass volatility (uses OHLC, lower variance than close-to-close)
+  - Parkinson volatility (HL range based)
+  - Volume z-score (cross-period normalization)
+  - Volume momentum (Δ volume / volume)
+  - RSI/MACD/BB normalized to z-scores
+  - Price acceleration (second derivative)
+  - Realized vol over multiple horizons
+  - High-low spread (intraday range)</p>
+
+
+<details class="plus-regime-detection-features" open>
+  <summary>Plus regime detection features</summary>
+  <ul>
+<li>Volatility regime (rolling vol percentile)</li>
+<li>Trend regime (slope of EMA)</li>
+</ul>
+</details>
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="src.advanced_features.build_advanced_features" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">build_advanced_features</span><span class="p">(</span><span class="n">df</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Replace raw OHLCV pipeline with engineered features.</p>
+<p>Input: DataFrame with timestamp, open, high, low, close, volume.
+Output: DataFrame with engineered features (drops warmup rows).</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="src.advanced_features.garman_klass_volatility" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">garman_klass_volatility</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Garman-Klass volatility estimator.
+σ²_GK = 0.5<em>(ln(H/L))² - (2</em>ln(2)-1)*(ln(C/O))²
+Uses OHLC, ~7x more efficient than close-to-close.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="src.advanced_features.parkinson_volatility" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">parkinson_volatility</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Parkinson volatility from high-low range. ~4x more efficient than C2C.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="src.advanced_features.get_tda_features" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">get_tda_features</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">feature_set</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Extract TDA point-cloud features.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="src.advanced_features.get_ml_features" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">get_ml_features</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">feature_set</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Extract ML classifier features (combined raw + TDA-derived).</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="src.binance_data" class="doc doc-heading">
+            <code>src.binance_data</code>
+
+
+</h2>
+
+    <div class="doc doc-contents first">
+
+        <p>High-Frequency Data Fetcher: Coinbase Exchange API.</p>
+<p>Free, globally accessible (unlike Binance which is geo-blocked in some regions).
+Provides hourly OHLCV with full historical pagination - 24x more data than CoinGecko.</p>
+<p>Endpoint: https://api.exchange.coinbase.com/products/{product}/candles
+Returns: [time, low, high, open, close, volume] in descending order.
+Max 300 candles per request.</p>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="src.binance_data.HighFreqFetcher" class="doc doc-heading">
+            <code>HighFreqFetcher</code>
+
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+
+
+        <p>Coinbase Exchange API fetcher with pagination.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.binance_data.HighFreqFetcher.fetch_history" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">fetch_history</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">365</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Paginate to fetch full history.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="src.binance_data.run_hf_pipeline" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">run_hf_pipeline</span><span class="p">(</span><span class="n">symbol</span><span class="o">=</span><span class="s1">&#39;BTC&#39;</span><span class="p">,</span> <span class="n">days</span><span class="o">=</span><span class="mi">365</span><span class="p">,</span> <span class="n">interval</span><span class="o">=</span><span class="s1">&#39;1h&#39;</span><span class="p">,</span> <span class="n">window_size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">save_dir</span><span class="o">=</span><span class="s1">&#39;data&#39;</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>End-to-end pipeline using Coinbase hourly data.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="src.multi_asset_pipeline" class="doc doc-heading">
+            <code>src.multi_asset_pipeline</code>
+
+
+</h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Multi-Asset Pooled Training Pipeline.</p>
+<p>Fetches multiple cryptos, computes advanced features + TDA features,
+pools them into one labeled dataset, then trains ML classifier on the pool.</p>
+
+
+<details class="why-pooling" open>
+  <summary>Why pooling</summary>
+  <ul>
+<li>4 assets x 4380 hourly candles = 17,520 samples vs 4380 single-asset</li>
+<li>Cross-asset learning forces model to find transferable signals</li>
+<li>Tighter Wilson CI from larger n</li>
+</ul>
+</details>
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="src.multi_asset_pipeline.fetch_multi_asset_pool" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">fetch_multi_asset_pool</span><span class="p">(</span><span class="n">symbols</span><span class="p">,</span> <span class="n">days</span><span class="o">=</span><span class="mi">180</span><span class="p">,</span> <span class="n">interval</span><span class="o">=</span><span class="s1">&#39;1h&#39;</span><span class="p">,</span> <span class="n">window_size</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Fetch and combine multiple assets into a pooled dataset.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="src.multi_asset_pipeline.get_combined_feature_cols" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">get_combined_feature_cols</span><span class="p">(</span><span class="n">df</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>All feature columns: ML features + TDA features.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="src.ml_signals" class="doc doc-heading">
+            <code>src.ml_signals</code>
+
+
+</h2>
+
+    <div class="doc doc-contents first">
+
+        <p>ML-Based Signal Generator: Train a classifier on TDA features.</p>
+<p>Instead of hand-crafted threshold rules (which the v2 validation showed
+don't work), train a classifier to predict next-period direction from
+the full TDA feature vector + price-derived features.</p>
+<p>Critical: training is done WITHIN each CV fold to avoid lookahead bias.</p>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="src.ml_signals.MLSignalGenerator" class="doc doc-heading">
+            <code>MLSignalGenerator</code>
+
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+
+
+        <p>Train a classifier on TDA features to predict direction.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.ml_signals.MLSignalGenerator.__init__" class="doc doc-heading">
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">model_type</span><span class="o">=</span><span class="s1">&#39;logistic&#39;</span><span class="p">,</span> <span class="n">horizon</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">prob_threshold</span><span class="o">=</span><span class="mf">0.55</span><span class="p">,</span> <span class="n">max_position_size</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>model_type</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>'logistic', 'rf', or 'gbm'</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;logistic&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>horizon</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>forward steps to predict (1 = next period)</p>
+              </div>
+            </td>
+            <td>
+                  <code>1</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>prob_threshold</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>minimum probability to take a position</p>
+              </div>
+            </td>
+            <td>
+                  <code>0.55</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_position_size</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>max fraction of capital per trade</p>
+              </div>
+            </td>
+            <td>
+                  <code>0.1</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.ml_signals.MLSignalGenerator.fit" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">fit</span><span class="p">(</span><span class="n">features_df</span><span class="p">,</span> <span class="n">prices</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Train on (features, future-direction) pairs.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.ml_signals.MLSignalGenerator.predict_proba" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">predict_proba</span><span class="p">(</span><span class="n">features_df</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Predict probability of UP move next period.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.ml_signals.MLSignalGenerator.generate_signals" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">generate_signals</span><span class="p">(</span><span class="n">features_df</span><span class="p">,</span> <span class="n">price_series</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Predict probabilities and convert to BUY/SELL/HOLD.</p>
+<p>BUY when P(up) &gt; prob_threshold
+SELL when P(up) &lt; 1 - prob_threshold
+HOLD otherwise</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="src.ml_signals.grid_search_ml" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">grid_search_ml</span><span class="p">(</span><span class="n">features_df</span><span class="p">,</span> <span class="n">prices</span><span class="p">,</span> <span class="n">n_splits</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Find best ML model + threshold combination.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="src.ml_signals.evaluate_ml_kfold" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">evaluate_ml_kfold</span><span class="p">(</span><span class="n">features_df</span><span class="p">,</span> <span class="n">prices</span><span class="p">,</span> <span class="n">n_splits</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">model_type</span><span class="o">=</span><span class="s1">&#39;logistic&#39;</span><span class="p">,</span> <span class="n">prob_threshold</span><span class="o">=</span><span class="mf">0.55</span><span class="p">,</span> <span class="n">horizon</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>K-fold time-series CV with ML classifier.</p>
+
+
+<details class="for-each-fold" open>
+  <summary>For each fold</summary>
+  <ul>
+<li>Train classifier on training portion</li>
+<li>Predict on test portion</li>
+<li>Score direction accuracy + run backtest</li>
+</ul>
+</details>
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="src.validation_v2" class="doc doc-heading">
+            <code>src.validation_v2</code>
+
+
+</h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Validation Framework v2: K-Fold Time Series CV + Grid Search.</p>
+
+
+<details class="improvements-over-v1" open>
+  <summary>Improvements over v1</summary>
+  <ul>
+<li>K-fold time series cross-validation (5 folds instead of 1 split)</li>
+<li>Grid search over BOTH threshold AND lookback window</li>
+<li>Robust to small sample sizes (Wilson confidence intervals)</li>
+<li>Walk-forward without data leakage</li>
+<li>Automatic threshold selection per fold (no global overfitting)</li>
+<li>Proper aggregation of fold results with std error</li>
+</ul>
+</details>        <p>Run with high-frequency Coinbase data for proper sample sizes.</p>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="src.validation_v2.wilson_interval" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">wilson_interval</span><span class="p">(</span><span class="n">successes</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">confidence</span><span class="o">=</span><span class="mf">0.95</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Wilson score interval for proportion (more robust than normal approx
+for small samples or extreme proportions like 0% or 100%).</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="src.validation_v2.time_series_kfold" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">time_series_kfold</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">n_splits</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">min_train_size</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Generate time-series-aware K-fold splits (no shuffle, no leakage).</p>
+
+
+<details class="each-fold" open>
+  <summary>Each fold</summary>
+  <ul>
+<li>Train: data from start to fold_end - test_size</li>
+<li>Test: next test_size samples</li>
+</ul>
+</details>        <p>Returns list of (train_idx, test_idx) tuples.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="src.validation_v2.bootstrap_metric" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">bootstrap_metric</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">metric_fn</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span> <span class="n">n_iterations</span><span class="o">=</span><span class="mi">2000</span><span class="p">,</span> <span class="n">confidence</span><span class="o">=</span><span class="mf">0.95</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Bootstrap CI for any metric function.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="src.validation_v2.run_validation_v2" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">run_validation_v2</span><span class="p">(</span><span class="n">features_df</span><span class="p">,</span> <span class="n">prices</span><span class="p">,</span> <span class="n">n_splits</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">param_grid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">symbol</span><span class="o">=</span><span class="s1">&#39;BTC&#39;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Full validation v2 pipeline.</p>
+<p>Returns dict with grid search, k-fold results, statistical tests, and report data.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="src.regime_filter" class="doc doc-heading">
+            <code>src.regime_filter</code>
+
+
+</h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Regime Filter: Only allow trades in favorable market conditions.</p>
+
+
+<details class="filters" open>
+  <summary>Filters</summary>
+  <ul>
+<li>Volatility regime: only trade when realized vol &gt; median (fat-tail edge)</li>
+<li>Trend regime: only trade with trend (or against if reversion strategy)</li>
+<li>Volume regime: only trade with above-average volume (liquidity)</li>
+</ul>
+</details>        <p>Applied as post-hoc mask on ML signals to reduce trade count + improve quality.</p>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="src.regime_filter.apply_regime_filter" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">apply_regime_filter</span><span class="p">(</span><span class="n">signals_df</span><span class="p">,</span> <span class="n">features_df</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Mask out signals that don't pass regime filter.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>signals_df</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>with 'signal' column</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>features_df</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>with regime-relevant columns</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>filters</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>dict like {'vol': 'median', 'volume': 0.0}</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="src.regime_filter.vol_regime_mask" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">vol_regime_mask</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">vol_col</span><span class="o">=</span><span class="s1">&#39;rv_20&#39;</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="s1">&#39;median&#39;</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Mask True where volatility is above threshold.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="src.backtester" class="doc doc-heading">
+            <code>src.backtester</code>
+
+
+</h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Backtester: Evaluate trading strategy performance on historical data.</p>
+<p>Computes Sharpe ratio, win rate, max drawdown, profit factor.
+Supports long-only and long/short strategies.</p>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="src.backtester.Backtester" class="doc doc-heading">
+            <code>Backtester</code>
+
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+
+
+        <p>Vectorized backtester for TDA-based trading signals.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="src.backtester.Backtester.run" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">run</span><span class="p">(</span><span class="n">prices</span><span class="p">,</span> <span class="n">signals_df</span><span class="p">,</span> <span class="n">allow_short</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Run backtest aligning prices to signals.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>prices</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>array-like of close prices</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>signals_df</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>DataFrame with 'signal' and 'position_size' columns</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>allow_short</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If True, SELL on flat position opens short</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>dict with trades, equity_curve, returns, metrics</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="src.backtester.format_metrics" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">format_metrics</span><span class="p">(</span><span class="n">metrics</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Pretty-print backtest metrics.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="src.backtester.run_backtest" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">run_backtest</span><span class="p">(</span><span class="n">symbol</span><span class="o">=</span><span class="s1">&#39;BTC&#39;</span><span class="p">,</span> <span class="n">save_dir</span><span class="o">=</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="n">allow_short</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">bt_kwargs</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>End-to-end backtest run.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div><div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The API reference is auto-generated from docstrings in source files. Run <code>mkdocs build</code> to regenerate.</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/minhachung/tda-crypto-trading" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.instant", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
