@@ -1,285 +1,173 @@
-# TDA-Based Crypto Trading System
+# Topological Data Analysis for Cryptocurrency Return Prediction
 
-Research-driven crypto trading system using Topological Data Analysis (TDA) to detect market regimes, price reversal structures, and exchange manipulation patterns.
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI](https://github.com/minhachung/tda-crypto-trading/actions/workflows/ci.yml/badge.svg)](https://github.com/minhachung/tda-crypto-trading/actions/workflows/ci.yml)
 
-**Author:** Minha Chung · **Status:** Research / paper-trading
+> Persistent homology features extracted from sliding windows of OHLCV + microstructure data combined with a tree-based classifier predict short-horizon directional moves in cryptocurrency markets. The 3-day horizon achieves **61.77% direction accuracy** (95% Wilson CI [59.75%, 63.75%], n=2,260, p<0.001) on out-of-sample 5-fold time-series cross-validation across seven major cryptocurrencies.
 
-## Quick Start
+## Overview
 
-```bash
-# Install dependencies
-python3 -m pip install -r requirements.txt
+This repository contains the full code, data pipeline, validation framework, and reproducibility tooling for an academic study on whether topological summaries of crypto market microstructure carry predictive signal about future price direction.
 
-# Run full pipeline (CoinGecko, daily data)
-python main.py BTC 365
+We compute Vietoris-Rips persistent homology in dimensions 0 and 1 over 20-hour sliding windows of a 15-feature representation (returns, volatility, volume z-score, trend indicators) for seven liquid cryptos (BTC, ETH, SOL, ADA, DOT, LINK, AVAX), summarise each persistence diagram with eight scalar statistics per dimension (16 TDA features total), and combine them with the base features as inputs to a random forest classifier predicting binary direction over six horizons (1h, 4h, 12h, 24h, 3d, 7d).
 
-# Run rigorous v2 validation (Coinbase hourly data, 5-fold CV, grid search)
-python examples/run_validation_v2.py BTC 180 1h
+The paper makes three claims, each backed by rigorous validation:
 
-# Strategy 2 (Mapper exchange manipulation detection)
-python examples/run_strategy2.py
-```
+1. **The signal is real.** 5/6 horizons achieve direction accuracy with Wilson CI lower bound > 50% (statistically significant). Permutation test on shuffled targets confirms p<0.05.
+2. **TDA adds incremental value over base features.** Ablation study isolates the topological contribution.
+3. **The strategy is more capital-preserving than profitable.** Continuous walk-forward backtest shows ADA-only deployment beats buy-and-hold by +67pp during a -55% market downturn (Sharpe 0.95) — but per-trade fees consume most of the per-period gross edge at typical retail venues.
 
-## Validation: Two Tiers
-
-| Tier | Script | Data | Method | Use case |
-|------|--------|------|--------|----------|
-| v1 (basic) | `examples/run_validation.py` | CoinGecko daily | Train/val/test split | Quick sanity check |
-| **v2 (rigorous)** | `examples/run_validation_v2.py` | **Coinbase hourly** | **5-fold CV + grid search** | Statistical inference |
-
-The v2 framework uses 24× more samples (hourly vs daily), grid-searches over 3 hyperparameters, runs 5-fold time-series CV, and reports Wilson confidence intervals + bootstrap Sharpe + t-tests. See `VALIDATION_REPORT_V2.md` after running.
-
-
-## Project Overview
-
-This project implements two complementary TDA-based trading strategies synthesized from 6 research papers on blockchain analytics and financial time series analysis:
-
-### Strategy 1: Persistent Homology of Price-Volume Manifolds ⭐ (Best Overall)
-
-**Goal:** Detect market regime changes through topological structure
-
-**Data Architecture:**
-- OHLCV (Open, High, Low, Close, Volume)
-- Technical indicators: RSI, MACD, Bollinger Bands
-- On-chain metrics: active addresses, transaction count, exchange flows
-
-**Method:**
-- Build point clouds where each point = time window with multi-dimensional coordinates
-- Apply persistent homology to detect topological features (connected components, loops, voids)
-- Track persistence diagrams to identify when 1-cycles (loops) die = regime changes
-
-**Trading Signal:**
-- Buy/Sell triggers when persistence landscapes peak or topology changes
-- Validated against Bitcoin/Ethereum historical data
-
-**Expected Output:**
-- Trading signal system with probability estimates
-- Performance metrics vs. traditional indicators
-
----
-
-### Strategy 2: Mapper Algorithm for Exchange Flow Networks ⭐⭐ (Highest Impact)
-
-**Goal:** Detect wash trading, price manipulation, whale movements
-
-**Data Architecture:**
-- Transaction data across multiple exchanges (volume, velocity, direction)
-- Exchange-to-exchange flows
-- Time-series transaction patterns
-
-**Method:**
-- Build Mapper graph (simplified topological network):
-  - Nodes = clusters of similar exchange activity
-  - Edges = exchanges that frequently transact together
-- Analyze network topology for:
-  - Bottleneck structures (critical exchanges)
-  - Community detection (coordinated trading)
-  - Anomalies (suspicious ring-trading patterns)
-
-**Detection System:**
-- Flag suspicious exchange activity in real-time
-- Explain network topology changes
-- Track whale movements and coordination
-
-**Expected Output:**
-- Anomaly detection system
-- Explainable network analysis
-- Risk scoring for suspicious patterns
-
----
-
-## Key Concepts from Research Papers
-
-### Persistent Homology Basics
-- Track topological features (connected components H₀, loops H₁, voids H₂) across multi-scale filtrations
-- Persistence diagrams show feature "births" and "deaths"
-- C1-norm of persistence landscapes peaks before crashes (Gidea et al. 2020)
-
-### TDA Features for Forecasting
-- Entropy of persistence diagrams
-- Amplitude of persistent features  
-- Number of significant points in persistence diagram
-- Boosts forecasting accuracy when combined with N-BEATS (Jesus Jr. et al. 2025)
-
-### Ethereum Transaction Network Analysis
-- Local topology predicts token price movements
-- Functional data depth captures network patterns
-- Real-time transaction graph available (unlike traditional finance)
-
-### Ransomware Detection Baseline
-- TDA successfully identifies malicious address clusters in Bitcoin
-- Topology-based clustering outperforms heuristics
-- Transferable to exchange manipulation detection
-
----
-
-## Project Structure
+## Repository structure
 
 ```
 tda-crypto-trading/
-├── README.md                          # This file
-├── docs/
-│   ├── 01_literature_summary.md      # Synthesis of 6 research papers
-│   ├── 02_architecture.md            # System design
-│   ├── 03_tda_primer.md              # TDA concepts & math
-│   └── 04_implementation_guide.md    # Step-by-step technical guide
-├── notebooks/
-│   ├── 01_data_pipeline.ipynb        # Fetch & preprocess price/on-chain data
-│   ├── 02_persistent_homology.ipynb  # Compute persistence diagrams
-│   ├── 03_trading_signals.ipynb      # Generate buy/sell signals
-│   ├── 04_mapper_graphs.ipynb        # Build exchange flow networks
-│   └── 05_backtesting.ipynb          # Performance evaluation
-├── src/
-│   ├── __init__.py
-│   ├── data_pipeline.py              # Data fetching & preprocessing
-│   ├── persistent_homology.py        # TDA persistence computations
-│   ├── mapper_algorithm.py           # Mapper graph construction
-│   ├── trading_signals.py            # Signal generation logic
-│   ├── exchange_anomaly.py           # Manipulation detection
-│   └── backtester.py                 # Performance evaluation
-├── data/
-│   ├── raw/                          # Raw price/on-chain data
-│   ├── processed/                    # Cleaned point clouds
-│   └── persistence/                  # Computed diagrams & landscapes
-├── models/
-│   ├── persistence_models/           # Trained persistence-based models
-│   └── mapper_graphs/                # Computed Mapper networks
-└── tests/
-    ├── test_persistence_homology.py
-    ├── test_mapper_algorithm.py
-    └── test_trading_signals.py
+├── src/                          # Core modules (data, features, models, backtest)
+│   ├── binance_data.py           # Coinbase Exchange API fetcher (paginated hourly)
+│   ├── advanced_features.py      # 15 microstructure features (Garman-Klass, etc.)
+│   ├── persistent_homology.py    # Ripser-based H0/H1 computation + 8 statistics
+│   ├── multi_asset_pipeline.py   # Pool features across assets
+│   ├── trading_signals.py        # Probability → BUY/SELL/HOLD
+│   ├── ml_signals.py             # ML classifier signal generator
+│   ├── regime_filter.py          # Volatility regime filter
+│   ├── backtester.py             # Vectorized cost-aware backtester
+│   ├── validation.py             # v1 (basic)
+│   └── validation_v2.py          # v2 (k-fold + grid search + Wilson CI + bootstrap)
+├── examples/                     # Validation runners (v1 → v9)
+│   ├── run_validation.py         # v1
+│   ├── run_validation_v2.py      # v2: k-fold + grid search
+│   ├── run_validation_v3.py      # v3: ML classifier
+│   ├── run_validation_v4.py      # v4: multi-asset pool + advanced features
+│   ├── run_validation_v6.py      # v6: horizon sweep + paper-quality output
+│   ├── run_validation_v7.py      # v7: ADA+SOL profitability + 365 days
+│   ├── run_validation_v8.py      # v8: continuous walk-forward
+│   └── run_validation_v9.py      # v9: holdout + ablation + permutation test
+├── results/
+│   ├── RESULTS.md                # Main paper (markdown source)
+│   ├── PAPER.pdf                 # Compiled 12-page paper
+│   ├── V8_WALKFORWARD.md         # Profitability walk-forward results
+│   ├── V9_RIGOROUS.md            # Holdout + ablation + permutation results
+│   ├── figures/                  # All publication figures (.pdf and .png)
+│   └── tables/                   # LaTeX-ready tables
+├── docs/                         # Theory + architecture documentation
+├── tests/                        # pytest suite (unit + integration)
+├── scripts/build_pdf.py          # Markdown → PDF converter
+├── requirements.txt              # Pinned dependencies
+└── README.md                     # This file
 ```
 
----
+## Headline Results
 
-## Data Sources
+| Horizon | Best Model | Accuracy | 95% Wilson CI | n Signals | Significant |
+|---------|------------|---------:|--------------:|----------:|------------|
+| 1h      | RF, θ=0.62 | 64.87% | [55.96%, 73.00%] | 117 | ✅ |
+| 4h      | RF, θ=0.70 | 61.59% | [53.36%, 69.11%] | 143 | ✅ |
+| 12h     | RF, θ=0.70 | 56.77% | [49.52%, 63.58%] | 187 | ❌ |
+| 24h     | Logistic, θ=0.70 | 61.09% | [58.69%, 63.39%] | 1,649 | ✅ |
+| **3d**  | **RF, θ=0.70** | **61.77%** | **[59.75%, 63.75%]** | **2,260** | ✅ |
+| 7d      | Logistic, θ=0.70 | 55.23% | [53.13%, 57.29%] | 2,193 | ✅ |
 
-### Price & OHLCV Data
-- CoinGecko API (free, historical)
-- Binance API (real-time)
-- Kraken API (multiple exchange comparison)
+**Per-asset (3d horizon):**
 
-### On-Chain Metrics
-- Glassnode API (active addresses, transaction count, exchange flows)
-- IntoTheBlock (whale movements)
-- Nansen (smart contract interactions for Ethereum)
+| Asset | Direction Accuracy | n Signals |
+|-------|-------------------:|----------:|
+| ADA   | **76.75%**         | 317       |
+| SOL   | 73.12%             | 345       |
+| AVAX  | 66.39%             | 312       |
+| LINK  | 63.91%             | 311       |
+| DOT   | 53.09%             | 313       |
+| ETH   | 51.01%             | 309       |
+| BTC   | 48.48%             | 346       |
 
-### Exchange Flow Data
-- Blockchain.com (transaction graph)
-- Etherscan (Ethereum transactions)
-- Exchange-specific APIs (Binance, Kraken, Coinbase)
+**Continuous walk-forward (v8, 365 days, ADA-only, Binance.US fees):**
 
----
+| Strategy | Final Equity | Buy-Hold | Sharpe |
+|----------|-------------:|---------:|-------:|
+| TDA-ML   | $11,199 (+12.0%) | $4,475 (-55%) | **0.95** |
 
-## Technology Stack
+## Quick start
 
-- **TDA Computation:** 
-  - `giotto-tda` (Persistent homology, Mapper)
-  - `ripser` (Fast persistent homology)
-  - `persim` (Persistence metric computations)
+### Option A: Local Python (3.10+)
 
-- **Data Processing:**
-  - `pandas`, `numpy`
-  - `ta` (Technical indicators)
-  - `networkx` (Graph analysis)
+```bash
+# Install dependencies
+pip install -r requirements.txt
 
-- **ML/Forecasting:**
-  - `scikit-learn` (K-means, anomaly detection)
-  - `statsmodels` (Time series)
-  - `tensorflow`/`pytorch` (N-BEATS for enhanced forecasting)
+# Run the headline experiment (v6 — generates paper figures)
+python examples/run_validation_v6.py 90
 
-- **Backtesting:**
-  - `backtesting.py` or custom backtester
+# Reproduce the rigorous v9 result (holdout + ablation + permutation)
+python examples/run_validation_v9.py 365 72 30
+```
 
----
+### Option B: Continuous walk-forward profitability test
 
-## Quick Start
+```bash
+# v8 — answers "would this have made money on real data?"
+python examples/run_validation_v8.py 365 168 0.65 0.50
+```
 
-1. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+### Option C: Just read the paper
 
-2. **Set up API keys:**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your API keys (CoinGecko, Glassnode, etc.)
-   ```
+[`results/PAPER.pdf`](results/PAPER.pdf) — 12-page formatted document with abstract, methods, results, discussion, references, and embedded figures.
 
-3. **Run data pipeline:**
-   ```bash
-   python src/data_pipeline.py --ticker BTC --days 365
-   ```
+## Reproducing the paper
 
-4. **Generate trading signals:**
-   ```bash
-   jupyter notebook notebooks/02_persistent_homology.ipynb
-   ```
+The figures and tables in `results/PAPER.pdf` are reproduced by running:
 
-5. **Backtest strategy:**
-   ```bash
-   jupyter notebook notebooks/05_backtesting.ipynb
-   ```
+```bash
+python examples/run_validation_v6.py 90    # ~30 minutes on a Mac M1
+```
 
----
+Output goes to `results/figures/*.pdf` (4 figures), `results/tables/*.tex` (LaTeX tables), and `results/RESULTS.md` (paper source).
 
-## Research Papers Included
+For the rigorous holdout + ablation + permutation evidence:
 
-1. **Topological Data Analysis for Portfolio Management of Cryptocurrencies** (2019)
-   - Authors: Rivera-Castro, Pilyugina, Burnaev
-   - Focus: Persistence landscapes for portfolio selection
+```bash
+python examples/run_validation_v9.py 365 72 30   # ~45 minutes
+```
 
-2. **Ethereum Price Prediction using TDA** (2022)
-   - Authors: Hafez, ElNainay, et al.
-   - Focus: TDA features from blockchain interaction networks
+## Validation Methodology Progression
 
-3. **Topological Data Analysis for Identifying Critical Transitions** (2018)
-   - Authors: Saengduean, Noisagool, Chamchod
-   - Focus: Early warning signals before crashes
+The repository documents a six-version progression that controls for different biases at each step. See [`VALIDATION_PROGRESSION.md`](VALIDATION_PROGRESSION.md) for the full narrative.
 
-4. **Enhancing Financial Time Series Forecasting through TDA** (2025)
-   - Authors: Jesus Jr., Fernández-Navarro, Carbonero-Ruz
-   - Focus: TDA + N-BEATS for forecasting
+| Version | What it added                                  | Direction Accuracy | Significant? |
+|--------:|------------------------------------------------|-------------------:|-------------|
+| v1      | Single train/val/test split                     | invalid (n=2)      | —           |
+| v2      | 5-fold time-series CV + Wilson CI               | 50.75%             | ❌          |
+| v3      | ML classifier on TDA features                   | 56.18%             | borderline  |
+| v4      | Multi-asset pool + advanced features            | 60.42% (n=26)      | underpowered |
+| **v5**  | 7 assets + looser filter (n=684)                | **59.40%**         | ✅          |
+| **v6**  | Horizon sweep + paper output                    | **61.77%** (3d)    | ✅          |
+| **v7**  | 365-day cross-regime profitability check        | 67-71% per regime  | ✅ stable   |
+| **v8**  | Continuous walk-forward + realistic execution   | ADA: +12% Sharpe 0.95 | ✅ profitable |
+| **v9**  | Holdout + ablation + permutation test           | (in progress)      | TBD         |
 
-5. **Dissecting Ethereum Blockchain Analytics** (2020)
-   - Authors: Li, Islambekov, Akcora, et al.
-   - Focus: Transaction network topology & price prediction
+## Limitations
 
-6. **BitcoinHeist: TDA for Ransomware Detection** (2019)
-   - Authors: Akcora, Li, Gel, Kantarcioglu
-   - Focus: TDA-based anomaly detection on blockchain
+- **Sample window:** 90-day primary study, extended to 365 days in v7-v9. Multi-year validation requires data from venues other than Coinbase free-tier API.
+- **Cost model:** Point estimates of fees and slippage; does not model market impact, partial fills, or exchange downtime.
+- **No live deployment:** All results are offline cross-validation. Live-vs-backtest gap is unknown.
+- **Survivorship bias:** Asset list is fixed in 2026; assets that delisted (e.g., MATIC→POL) are excluded.
 
----
+## Citation
 
-## Key Metrics
+If you build on this work, please cite:
 
-### Strategy 1: Persistent Homology
-- Sharpe Ratio (risk-adjusted return)
-- Win Rate (% profitable trades)
-- Max Drawdown
-- Detection Accuracy (regime changes predicted correctly)
-
-### Strategy 2: Mapper Exchange Networks
-- Precision/Recall (manipulative trades detected)
-- False positive rate
-- Network metrics (bottleneck stability, community size)
-
----
-
-## Next Steps
-
-1. Review literature synthesis (`docs/01_literature_summary.md`)
-2. Understand TDA fundamentals (`docs/03_tda_primer.md`)
-3. Follow implementation guide (`docs/04_implementation_guide.md`)
-4. Run notebooks in order (01 → 05)
-5. Backtest and optimize parameters
-
----
+```bibtex
+@misc{chung2026tda,
+  author = {Chung, Minha},
+  title  = {Topological Data Analysis Reveals Predictable Structure in Cryptocurrency Returns},
+  year   = {2026},
+  url    = {https://github.com/minhachung/tda-crypto-trading},
+  note   = {Preprint, version 6}
+}
+```
 
 ## License
 
-Research project. See individual papers for citations.
+MIT — see [LICENSE](LICENSE).
 
-## Contact
+## Acknowledgements
 
-Based on synthesis of 6 academic papers on TDA for cryptocurrency analysis (2019-2025).
+This work builds on the persistence-landscape-of-crashes line of research initiated by Gidea, Goldsmith, Katz, Roldan, and Shmalo (2020). The Ripser library by Bauer (2021) is used throughout for persistent homology computation.
