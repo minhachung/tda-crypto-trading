@@ -51,3 +51,4 @@ models/*.pt
 # iCloud sync artifacts
 .icloud
 *.icloud
+.gstack/
