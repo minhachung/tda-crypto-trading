@@ -1,0 +1,84 @@
+site_name: TDA-Crypto-Trading
+site_description: Topological Data Analysis for cryptocurrency direction prediction
+site_author: Minha Chung
+site_url: https://minhachung.github.io/tda-crypto-trading
+repo_url: https://github.com/minhachung/tda-crypto-trading
+repo_name: minhachung/tda-crypto-trading
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.instant
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+  icon:
+    logo: material/chart-line-variant
+
+nav:
+  - Home: index.md
+  - Tutorial: tutorial.md
+  - Validation Methodology: validation.md
+  - API Reference: api.md
+  - Paper:
+    - Results: ../results/RESULTS.md
+    - Validation Progression: ../VALIDATION_PROGRESSION.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - tables
+  - attr_list
+  - md_in_html
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: false
+            show_root_heading: true
+            show_root_toc_entry: true
+            members_order: source
+
+extra_javascript:
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/minhachung/tda-crypto-trading
