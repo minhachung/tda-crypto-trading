@@ -7,6 +7,10 @@
 data/raw/
 data/processed/
 data/persistence/
+data/paper_trades/
+data/paper_trade_cache/
+data/pooled_*.parquet
+data/pooled_*.parquet.meta.txt
 *.npy
 *.csv
 *.png
