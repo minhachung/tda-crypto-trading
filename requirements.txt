@@ -21,3 +21,14 @@ requests>=2.31,<3
 reportlab>=4.0,<5
 pypdf>=4.0,<6
 markdown>=3.5,<4
+
+# Stronger ML baselines used in v11 (LOAO).
+# xgboost and lightgbm require an OpenMP runtime — on macOS install via
+# `brew install libomp` before pip install.
+xgboost>=2.0,<4
+lightgbm>=4.0,<5
+catboost>=1.2,<2
+statsmodels>=0.14,<1
+
+# Parquet IO for the v11 pooled-data cache.
+pyarrow>=14,<22
