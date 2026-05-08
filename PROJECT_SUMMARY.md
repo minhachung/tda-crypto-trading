@@ -1,7 +1,22 @@
 # TDA Crypto Trading Project - Summary
 
 **Created:** 2026-05-04
-**Status:** Ready for Implementation
+**Last update:** 2026-05-08 (v10/v12 paper-grade methodology corrections)
+**Status:** Methodology stable; main statistical result is **negative-leaning** under leak-safe v10/v12 (full-grid permutation $p = 0.1584$, NOT significant at $\alpha = 0.05$).
+
+---
+
+## Current Paper-Grade Headline
+
+| Run | Result |
+|-----|--------|
+| v10 best-of-grid (3y, signal-weighted) | **60.68%** direction accuracy on a 3-year multi-asset pool |
+| v10 single-config diagnostic ($B = 1{,}000$, post-selection) | $p = 0.0739$ — marginal |
+| **v10 full-grid main result ($B = 100$, multiple-testing-aware)** | **$p = 0.1584$ — NOT significant** |
+| v12 ablation (logistic, 3y leak-safe) | base + tda_v1 = 58.06% vs base 56.68%, **Δ = +1.38 pp** |
+| v8 walk-forward (leak-safe rerun) | strategy −5.2% to −18.3%; **beats B&H by +29 to +55 pp** in every cell |
+
+The earlier v9 abstract claim of $p = 0.0000$ has been superseded by v10 after correcting two methodology errors (unweighted row-mean accuracy + partial-block-truncating block shuffle). See `VALIDATION_PROGRESSION.md` for the full reconciliation and `results/RESULTS.md` §3.4 for the technical detail.
 
 ---
 

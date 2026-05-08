@@ -4,19 +4,19 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/minhachung/tda-crypto-trading/actions/workflows/ci.yml/badge.svg)](https://github.com/minhachung/tda-crypto-trading/actions/workflows/ci.yml)
 
-> Persistent homology features extracted from sliding windows of OHLCV + microstructure data combined with a tree-based classifier predict short-horizon directional moves in cryptocurrency markets. The 3-day horizon achieves **61.77% direction accuracy** (95% Wilson CI [59.75%, 63.75%], n=2,260, p<0.001) on out-of-sample 5-fold time-series cross-validation across seven major cryptocurrencies.
+> Persistent homology features extracted from sliding windows of OHLCV + microstructure data combined with a tree-based classifier produce a small positive but **statistically non-significant** directional association in cryptocurrency markets. Under leak-safe paper-grade methodology on a 3-year multi-asset pool, the best-of-grid 3-day-horizon configuration achieves **60.68% signal-weighted direction accuracy** (n = 183,379), but the multiple-testing-aware **full-grid permutation p-value is 0.1584** — *not* significant at $\alpha = 0.05$. This README documents the full v1→v12 methodology progression and the v10/v12 corrections that downgraded the earlier v9 claim of $p = 0.0000$ to the current honest negative-leaning result.
 
 ## Overview
 
 This repository contains the full code, data pipeline, validation framework, and reproducibility tooling for an academic study on whether topological summaries of crypto market microstructure carry predictive signal about future price direction.
 
-We compute Vietoris-Rips persistent homology in dimensions 0 and 1 over 20-hour sliding windows of a 15-feature representation (returns, volatility, volume z-score, trend indicators) for seven liquid cryptos (BTC, ETH, SOL, ADA, DOT, LINK, AVAX), summarise each persistence diagram with eight scalar statistics per dimension (16 TDA features total), and combine them with the base features as inputs to a random forest classifier predicting binary direction over six horizons (1h, 4h, 12h, 24h, 3d, 7d).
+We compute Vietoris-Rips persistent homology in dimensions 0 and 1 over 20-hour sliding windows of a 15-feature representation (returns, volatility, volume z-score, trend indicators) for seven liquid cryptos (BTC, ETH, SOL, ADA, DOT, LINK, AVAX), summarise each persistence diagram with either 8 scalar statistics per dimension (16-dim v1) or a 10×10 persistence-image grid per dimension (200-dim v2), and combine them with the base features as inputs to logistic / random-forest / XGBoost classifiers predicting binary direction.
 
-The paper makes three claims, each backed by rigorous validation:
+The paper now makes three honest claims, after the v10/v12 methodology corrections:
 
-1. **The signal is real.** 5/6 horizons achieve direction accuracy with Wilson CI lower bound > 50% (statistically significant). Permutation test on shuffled targets confirms p<0.05.
-2. **TDA adds incremental value over base features.** Ablation study isolates the topological contribution.
-3. **The strategy is more capital-preserving than profitable.** Continuous walk-forward backtest shows ADA-only deployment beats buy-and-hold by +67pp during a -55% market downturn (Sharpe 0.95) — but per-trade fees consume most of the per-period gross edge at typical retail venues.
+1. **The directional association is small and not statistically significant.** Under properly leak-safe and multiple-testing-aware methodology, the best-of-grid accuracy of 60.68% on a 3-year multi-asset pool fails to reject the chance-plus-cherry-picking null ($p = 0.1584$, B = 100 full-grid permutation; the $B = 1{,}000$ post-selection single-config diagnostic is marginal at $p = 0.0739$).
+2. **TDA *does* add a small ablation lift under logistic on the 3-year pool.** v12 reports `base + tda_v1` = 58.06% vs `base` alone = 56.68% on signal-weighted accuracy — a $+1.38$pp delta. This contradicts the v9 ablation's $-5.55$pp on 365 days, which was inflated by methodology choices (unweighted row-mean accuracy, partial-block-truncating shuffle) that v10/v12 correct.
+3. **The strategy is capital-preserving but not income-producing.** v8 continuous walk-forward on the leak-safe pipeline shows strategy returns of $-5.2$% to $-18.3$% across two assets and two fee venues, but consistently beats buy-and-hold by 29 to 55 percentage points across the 365-day evaluation window (B&H lost 47 to 60% over the same window).
 
 ## Repository structure
 
@@ -56,34 +56,44 @@ tda-crypto-trading/
 └── README.md                     # This file
 ```
 
-## Headline Results
+## Headline Results — paper-grade (post v10/v12 corrections)
 
-| Horizon | Best Model | Accuracy | 95% Wilson CI | n Signals | Significant |
-|---------|------------|---------:|--------------:|----------:|------------|
-| 1h      | RF, θ=0.62 | 64.87% | [55.96%, 73.00%] | 117 | ✅ |
-| 4h      | RF, θ=0.70 | 61.59% | [53.36%, 69.11%] | 143 | ✅ |
-| 12h     | RF, θ=0.70 | 56.77% | [49.52%, 63.58%] | 187 | ❌ |
-| 24h     | Logistic, θ=0.70 | 61.09% | [58.69%, 63.39%] | 1,649 | ✅ |
-| **3d**  | **RF, θ=0.70** | **61.77%** | **[59.75%, 63.75%]** | **2,260** | ✅ |
-| 7d      | Logistic, θ=0.70 | 55.23% | [53.13%, 57.29%] | 2,193 | ✅ |
+**v10 multi-year permutation tests (3-year multi-asset pool, n = 183,379):**
 
-**Per-asset (3d horizon):**
+| Test | $B$ | Real-data accuracy | Null mean ± std | $p$-value | Verdict |
+|------|----:|-------------------:|-----------------|----------:|---------|
+| Single-config (post-selection diagnostic) | 1,000 | 60.68% | 49.73% ± 8.05% | **0.0739** | marginal |
+| **Full-grid (multiple-testing-aware MAIN)** | 100 | 60.68% | 55.08% ± 6.03% | **0.1584** | **NOT significant** |
 
-| Asset | Direction Accuracy | n Signals |
-|-------|-------------------:|----------:|
-| ADA   | **76.75%**         | 317       |
-| SOL   | 73.12%             | 345       |
-| AVAX  | 66.39%             | 312       |
-| LINK  | 63.91%             | 311       |
-| DOT   | 53.09%             | 313       |
-| ETH   | 51.01%             | 309       |
-| BTC   | 48.48%             | 346       |
+**v12 ablation under leak-safe methodology (1,095-day pool, signal-weighted, per-fold imager fit):**
 
-**Continuous walk-forward (v8, 365 days, ADA-only, Binance.US fees):**
+| Feature Set | logistic | xgboost |
+|-------------|---------:|---------:|
+| base | 56.68% / 4,042 | 54.63% / 13,254 |
+| base + tda_v1 (16 scalars) | **58.06% / 6,221 (Δ +1.38 pp)** | 53.59% / 14,886 (Δ −1.04 pp) |
+| base + tda_v2 (200-dim images) | 56.68% / 4,042 (Δ 0.00 pp) | 54.18% / 13,049 (Δ −0.45 pp) |
+| base + v1 + v2 | 58.09% / 6,225 (Δ +1.41 pp) | 53.57% / 15,200 (Δ −1.06 pp) |
+| base + shuffled_v2 (control) | 56.68% / 4,042 (Δ 0.00 pp) | 54.18% / 13,049 (Δ −0.45 pp) |
 
-| Strategy | Final Equity | Buy-Hold | Sharpe |
-|----------|-------------:|---------:|-------:|
-| TDA-ML   | $11,199 (+12.0%) | $4,475 (-55%) | **0.95** |
+**v9 holdout (one-shot, never-touched window, signal-weighted):**
+
+| Metric | Value |
+|--------|-------|
+| Pooled holdout accuracy | **65.30%** (Wilson CI [60.49%, 69.75%]) |
+| n signals | 403 |
+| Beat B&H | 2 / 7 assets (ADA, DOT) |
+| BTC contribution | $n = 4$ — uninterpretable, excluded |
+
+**v8 continuous walk-forward on the leak-safe pipeline (365 days):**
+
+| Scenario | Asset | Strategy | B&H | Δ vs B&H | Sharpe |
+|----------|-------|---------:|----:|---------:|-------:|
+| Binance Maker | ADA | $-5.20$% | $-60.38$% | **$+55.17$ pp** | $-0.30$ |
+| Binance Maker | SOL | $-15.01$% | $-47.18$% | $+32.17$ pp | $-1.45$ |
+| Coinbase Taker | ADA | $-9.49$% | $-60.38$% | $+50.89$ pp | $-0.61$ |
+| Coinbase Taker | SOL | $-18.34$% | $-47.18$% | $+28.85$ pp | $-1.82$ |
+
+The strategy is **capital-preserving** (beats buy-and-hold by 29–55 pp on every cell during a sustained drawdown) but produces **negative absolute returns** under realistic transaction costs.
 
 ## Quick start
 
@@ -93,17 +103,20 @@ tda-crypto-trading/
 # Install dependencies
 pip install -r requirements.txt
 
-# Run the headline experiment (v6 — generates paper figures)
-python examples/run_validation_v6.py 90
+# Reproduce the v9 rigorous result (holdout + ablation + B=30 permutation)
+python examples/run_validation_v9.py 365 72 30        # ~1.5h
 
-# Reproduce the rigorous v9 result (holdout + ablation + permutation)
-python examples/run_validation_v9.py 365 72 30
+# Reproduce the v10 paper-grade headline (multi-year + B=1,000 single-config + B=100 full-grid)
+python examples/run_validation_v10.py 1095 1000 100   # ~12h on Apple Silicon
+
+# Reproduce the v12 leak-safe ablation (v1 vs v2 representation, both classifiers)
+python examples/run_validation_v12.py 1095            # ~20m
 ```
 
 ### Option B: Continuous walk-forward profitability test
 
 ```bash
-# v8 — answers "would this have made money on real data?"
+# v8 — answers "would this have made money on real data?" (leak-safe pipeline)
 python examples/run_validation_v8.py 365 168 0.65 0.50
 ```
 
@@ -127,28 +140,33 @@ For the rigorous holdout + ablation + permutation evidence:
 python examples/run_validation_v9.py 365 72 30   # ~45 minutes
 ```
 
-## Validation Methodology Progression
+## Validation Methodology Progression — v1 through v12
 
-The repository documents a six-version progression that controls for different biases at each step. See [`VALIDATION_PROGRESSION.md`](VALIDATION_PROGRESSION.md) for the full narrative.
+See [`VALIDATION_PROGRESSION.md`](VALIDATION_PROGRESSION.md) for the full narrative. Headline numbers below reflect the **post-fix** (leak-safe, signal-weighted, partial-block-preserving) reruns where applicable.
 
-| Version | What it added                                  | Direction Accuracy | Significant? |
-|--------:|------------------------------------------------|-------------------:|-------------|
-| v1      | Single train/val/test split                     | invalid (n=2)      | —           |
-| v2      | 5-fold time-series CV + Wilson CI               | 50.75%             | ❌          |
-| v3      | ML classifier on TDA features                   | 56.18%             | borderline  |
-| v4      | Multi-asset pool + advanced features            | 60.42% (n=26)      | underpowered |
-| **v5**  | 7 assets + looser filter (n=684)                | **59.40%**         | ✅          |
-| **v6**  | Horizon sweep + paper output                    | **61.77%** (3d)    | ✅          |
-| **v7**  | 365-day cross-regime profitability check        | 67-71% per regime  | ✅ stable   |
-| **v8**  | Continuous walk-forward + realistic execution   | ADA: +12% Sharpe 0.95 | ✅ profitable |
-| **v9**  | Holdout + ablation + permutation test           | (in progress)      | TBD         |
+| Version | What it added | Headline | Significance |
+|--------:|---------------|----------|--------------|
+| v1 | Single train/val/test split | invalid (n=2) | — |
+| v2 | 5-fold time-series CV + Wilson CI | 50.75% | ❌ |
+| v3 | ML classifier on TDA features | 56.18% | borderline |
+| v4 | Multi-asset pool + advanced features | 60.42% (n=26) | underpowered |
+| v5 | 7 assets + looser filter (n=684) | 59.40% | ✅ Wilson lower-bound > 50% |
+| v6 | Horizon sweep + paper output | 61.77% (3d, pre-fix) | ✅ in v6 framing |
+| v7 | 365-day cross-regime profitability | 67–71% per regime (pre-fix) | ✅ in v7 framing |
+| v8 | Continuous walk-forward (leak-safe rerun) | Strategy −5.2% to −18.3%; **beats B&H by +29–55 pp** | capital-preserving |
+| v9 | Rigorous holdout + ablation + B=30 perm (post-fix) | CV 61.88%, holdout 65.30%, ablation Δ=−5.6pp, p=0.0000 | ✅ at $\alpha = 0.05$ within v9 framing |
+| **v10** | **Multi-year + B=1,000 + B=100 grid + signal-weighted + leak-aware shuffle** | **Best 60.68%, single-config p=0.0739, full-grid p=0.1584** | **NOT significant at $\alpha = 0.05$** |
+| v11 | LOAO + stronger baselines (XGB/LGBM/CatBoost/momentum/vol-breakout) | logistic LOAO 73.76% vs returns-only 58.32% (+15 pp) | ✅ cross-asset transferability |
+| **v12** | **TDA-rep ablation (v1 scalars vs v2 persistence images, leak-safe)** | **base+v1 logistic +1.38 pp; v2 L2-nullified; shuffled control fires** | reverses v9 ablation sign |
 
 ## Limitations
 
-- **Sample window:** 90-day primary study, extended to 365 days in v7-v9. Multi-year validation requires data from venues other than Coinbase free-tier API.
+- **Sample window:** Headline 1,095 days (3 years) in v10 and v12. Even longer samples (5+ years) could shift the v10 full-grid p-value in either direction.
 - **Cost model:** Point estimates of fees and slippage; does not model market impact, partial fills, or exchange downtime.
 - **No live deployment:** All results are offline cross-validation. Live-vs-backtest gap is unknown.
-- **Survivorship bias:** Asset list is fixed in 2026; assets that delisted (e.g., MATIC→POL) are excluded.
+- **TDA representation:** Persistence landscapes at multiple resolutions, alpha complexes, and learned filtrations remain unexplored and could plausibly surface signal that v1/v2 miss.
+- **xgboost cannot extract TDA signal:** Every v1 / v2 / v1+v2 condition under xgboost hurts vs base alone on the leak-safe pipeline. Larger samples or stronger regularization would be needed to retest.
+- **Methodology was corrected during paper preparation:** The earlier v9 abstract reported $p = 0.0000$. The v10 corrected p-value is $0.1584$. Both numbers refer to the *same* experimental question; only the methodology differs. We document the change in `VALIDATION_PROGRESSION.md`.
 
 ## Citation
 
