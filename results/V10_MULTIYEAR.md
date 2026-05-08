@@ -4,7 +4,7 @@
 1. Sample window: extend from 365 days to 1095 days (3.0 years)
 2. Permutation count: extend from B=25 to B=1000 (single config) and B=100 (full grid)
 
-**Date:** 2026-05-07
+**Date:** 2026-05-08
 **Symbols:** BTC, ETH, SOL, ADA, DOT, LINK, AVAX
 **Pool size:** 183,379 samples
 **Train+Val:** 146,699 | **Holdout:** 36,680
@@ -14,43 +14,47 @@
 | Parameter | Value |
 |-----------|-------|
 | Model | logistic |
-| Probability threshold | 0.65 |
-| Regime filter | {'vol': 'median'} |
-| CV direction accuracy | **62.94%** |
+| Probability threshold | 0.70 |
+| Regime filter | None |
+| CV direction accuracy | **60.68%** |
 
-## 2. Single-Config Permutation Test (B = 1000)
+## 2. Post-Selection Single-Config Diagnostic (B = 1000)
 
-Block-shuffled targets in 7-day blocks, reran the BEST config.
-Tests whether the 62.94% accuracy at this exact config could be chance.
+Block-shuffled targets in 7-day blocks (final partial block preserved), reran the BEST config.
+
+**Important caveat:** the best config was selected on the unshuffled real data, so this null distribution is over chance variation *at this single config only*, not over chance + multiple testing across the grid. Treat this section as a sanity check; section 3 (full-grid permutation) is the headline multiple-testing-aware result.
 
 | Metric | Value |
 |--------|-------|
 | Permutations run | 1000 |
-| Mean shuffled-data accuracy | 50.12% +/- 4.42% |
-| Max shuffled-data accuracy | 63.77% |
-| Actual accuracy | **62.94%** |
-| Permutations matching real result | 2/1000 |
-| **Empirical p-value** | **0.00300** |
-| Computation time | 224.5 min |
+| Mean shuffled-data accuracy | 49.73% +/- 8.05% |
+| Max shuffled-data accuracy | 78.02% |
+| Actual accuracy | **60.68%** |
+| Permutations matching real result | 73/1000 |
+| **Empirical p-value** | **0.07393** |
+| Computation time | 83.7 min |
 
-## 3. Full-Grid Permutation Test (B = 100)
+## 3. Full-Grid Permutation Test (B = 100) — main multiple-testing-aware result
 
-For each permutation, ran the FULL grid search and took the BEST.
-Tests whether the best-of-grid result could be chance + multiple testing.
+For each permutation, reran the FULL grid search on block-shuffled targets and recorded the BEST accuracy across the grid.
+This null distribution accounts for cherry-picking across model × threshold × regime configurations, so its empirical p-value is the headline evidence v10 reports.
 
 | Metric | Value |
 |--------|-------|
 | Permutations run | 100 |
-| Mean best-of-grid on shuffled data | 54.34% +/- 3.19% |
-| Max best-of-grid on shuffled data | 61.01% |
-| Actual best-of-grid on real data | **62.94%** |
-| Permutations matching real | 0/100 |
-| **Empirical p-value** | **0.0099** |
-| Computation time | 341.6 min |
+| Mean best-of-grid on shuffled data | 55.08% +/- 6.03% |
+| Max best-of-grid on shuffled data | 77.08% |
+| Actual best-of-grid on real data | **60.68%** |
+| Permutations matching real | 15/100 |
+| **Empirical p-value** | **0.1584** |
+| Computation time | 667.4 min |
 
 ## 4. Verdict
 
-**Single-config:** Significant (p = 0.0030 < 0.01).
-**Full-grid:** Best-of-grid result survives multiple-testing correction (p = 0.0099).
+**Headline (full-grid, multiple-testing-aware):**
+- Not significant (p = 0.1584).
 
-This run definitively resolves the v9 limitation that 25 permutations could not establish p < 0.001.
+**Post-selection single-config diagnostic** (sanity check, NOT a headline p-value):
+- Diagnostic p = 0.0739.
+
+This run materially strengthens the permutation evidence relative to v9, subject to the grid, sample window, and data source tested.
