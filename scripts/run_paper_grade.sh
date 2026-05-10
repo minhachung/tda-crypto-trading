@@ -18,6 +18,14 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# Load .env (gitignored) for API keys like ETHERSCAN_API_KEY.
+# Without ETHERSCAN_API_KEY, ETH on-chain just returns empty (graceful).
+if [[ -f .env ]]; then
+    set -a
+    source .env
+    set +a
+fi
+
 mode="${1:-both}"
 
 PASS_A_LOG="results/v13_pass_a_smoke.log"

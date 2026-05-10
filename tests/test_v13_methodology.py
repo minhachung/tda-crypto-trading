@@ -319,12 +319,32 @@ def test_real_external_columns_whitelist_is_explicit():
     assert 'spread_zscore_60' in REAL_EXTERNAL_COLUMNS
 
 
-def test_real_onchain_supported_btc_only():
-    """Currently free, no-auth source = blockchain.info → BTC only."""
+def test_real_onchain_supported_depends_on_etherscan_key(monkeypatch):
+    """BTC always supported (blockchain.info, no key). ETH supported iff
+    ETHERSCAN_API_KEY is set. Other altcoins never supported on free tier."""
     from src.onchain_metrics import is_real_onchain_supported
+
+    # BTC: always supported regardless of env
+    monkeypatch.delenv('ETHERSCAN_API_KEY', raising=False)
     assert is_real_onchain_supported('BTC') is True
-    assert is_real_onchain_supported('ETH') is False
+
+    # ETH: requires ETHERSCAN_API_KEY
+    assert is_real_onchain_supported('ETH') is False  # no key
+    monkeypatch.setenv('ETHERSCAN_API_KEY', 'dummy_key_for_test')
+    assert is_real_onchain_supported('ETH') is True   # key present
+
+    # Other altcoins: never supported
     assert is_real_onchain_supported('SOL') is False
+    assert is_real_onchain_supported('ADA') is False
+
+
+def test_real_external_columns_includes_eth():
+    """REAL_EXTERNAL_COLUMNS must whitelist Etherscan ETH metrics."""
+    from examples.run_validation_v13 import REAL_EXTERNAL_COLUMNS
+    for col in ['eth_transaction_count', 'eth_gas_used',
+                'eth_base_fee_gwei', 'eth_gas_limit',
+                'eth_transaction_count_z', 'eth_gas_used_z']:
+        assert col in REAL_EXTERNAL_COLUMNS, f"{col} should be real-whitelisted"
 
 
 def test_cross_exchange_supported_majors():

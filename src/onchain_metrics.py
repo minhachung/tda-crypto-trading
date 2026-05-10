@@ -1,26 +1,29 @@
 """
-On-Chain Metrics Fetcher: REAL data from blockchain.info charts API (free).
+On-Chain Metrics Fetcher: REAL data from free APIs.
 
-blockchain.info exposes a no-auth, free public charts API for Bitcoin
-network metrics. ETH/altcoin coverage is NOT available without a paid
-provider, so this module honestly returns empty data for non-BTC assets
-(callers detect via `len(df) == 0` and treat the asset as having no
-on-chain features rather than fabricating synthetic ones).
+  - BTC: blockchain.info charts API (no auth, no signup, free)
+         https://api.blockchain.info/charts/{metric}?timespan={N}days
+  - ETH: Etherscan V2 (free tier) — requires ETHERSCAN_API_KEY env var.
+         Free tier doesn't expose daily-aggregated history, so we walk
+         block-by-day: getblocknobytime(midnight) → eth_getBlockByNumber
+         → extract tx_count + gas_used + base_fee + gas_limit.
+         2 API calls per day; 100k/day rate limit on free tier means we
+         can cover any window we care about.
 
-Endpoint:  https://api.blockchain.info/charts/{metric}?timespan={N}days&format=json
-Metrics:   n-transactions, hash-rate, mempool-size, avg-block-size,
-           transaction-fees-usd, miners-revenue
-Coverage:  BTC only (free)
+For altcoins (SOL, ADA, DOT, LINK, AVAX, …) no free historical on-chain
+source exists. fetch_metrics returns an empty DataFrame so callers can
+detect missing data instead of silently merging in synthetic noise.
 
-Why this trade-off (BTC-only real > all-asset synthetic):
-  - The user explicitly said "no paid services"
-  - Synthetic on-chain features bias every model that touches them — they
-    look like signal in-sample (random walks have structure) but cannot
-    generalise. BTC-real + everything-else-empty is the honest version.
+Why this trade-off (BTC+ETH real > all-asset synthetic):
+  Synthetic on-chain features bias every model that touches them — they
+  look like signal in-sample (random walks have structure) but cannot
+  generalise. Real-only-where-free is the honest version.
 """
 
 from __future__ import annotations
 
+import os
+import time
 import warnings
 from typing import Dict, List, Optional, Tuple
 
@@ -44,20 +47,36 @@ BLOCKCHAIN_INFO_METRICS = {
     'miners-revenue':       'miners_revenue',
 }
 
+# Etherscan V2: free tier. Block-by-day walk gives us daily aggregates.
+ETHERSCAN_V2_BASE = "https://api.etherscan.io/v2/api"
+ETHERSCAN_CHAINID = {'ETH': 1}
+
 
 def is_real_onchain_supported(symbol: str) -> bool:
-    """True iff a free, no-auth real on-chain source exists for this symbol.
+    """True iff a free real on-chain source exists for this symbol.
 
-    Currently BTC only via blockchain.info. ETH would need Etherscan with
-    a free API key (sign-up required); altcoins need paid providers.
+    - BTC: always supported (blockchain.info, no key needed)
+    - ETH: supported iff ETHERSCAN_API_KEY is set in environment
+    - everything else: not supported on free tier
     """
-    return symbol.upper() == 'BTC'
+    s = symbol.upper()
+    if s == 'BTC':
+        return True
+    if s == 'ETH':
+        return bool(os.environ.get('ETHERSCAN_API_KEY'))
+    return False
+
+
+def _has_etherscan_key() -> bool:
+    return bool(os.environ.get('ETHERSCAN_API_KEY'))
 
 
 class OnChainMetricsFetcher:
-    """Fetch real on-chain metrics from blockchain.info (BTC, free, no auth).
+    """Fetch real on-chain metrics from free APIs:
+       BTC → blockchain.info (no auth)
+       ETH → Etherscan V2 (free tier, requires ETHERSCAN_API_KEY env var)
 
-    For non-BTC assets returns an empty DataFrame so callers detect
+    For unsupported assets returns an empty DataFrame so callers detect
     "no on-chain features available" rather than getting synthetic noise.
     """
 
@@ -66,16 +85,22 @@ class OnChainMetricsFetcher:
         self.days = days
         self.timeout = timeout
         self.is_supported = is_real_onchain_supported(self.symbol)
+        self._etherscan_key = os.environ.get('ETHERSCAN_API_KEY', '')
 
     def fetch_metrics(self) -> pd.DataFrame:
         """Fetch real on-chain metrics or return empty DataFrame."""
         if requests is None:
-            warnings.warn("requests not installed; cannot fetch blockchain.info")
+            warnings.warn("requests not installed")
             return self._empty_schema()
         if not self.is_supported:
             return self._empty_schema()
         try:
-            df = self._fetch_blockchain_info()
+            if self.symbol == 'BTC':
+                df = self._fetch_blockchain_info()
+            elif self.symbol == 'ETH':
+                df = self._fetch_etherscan_eth()
+            else:
+                return self._empty_schema()
             if df.empty:
                 return self._empty_schema()
             return self._z_score(df)
@@ -131,6 +156,107 @@ class OnChainMetricsFetcher:
             merged = pd.merge(merged, m, on='timestamp', how='outer')
         return merged.sort_values('timestamp').reset_index(drop=True)
 
+    def _fetch_etherscan_eth(self) -> pd.DataFrame:
+        """Walk Etherscan V2 block-by-day and aggregate free metrics.
+
+        Two API calls per day (getblocknobytime + eth_getBlockByNumber).
+        Etherscan free-tier rate limit: 5 calls/sec, 100k/day. We pause
+        ~0.25s between paired calls to stay well under both limits.
+
+        Per-day extracts:
+          eth_transaction_count : len(block.transactions)
+          eth_gas_used          : decimal of block.gasUsed (wei → gas units)
+          eth_base_fee_gwei     : block.baseFeePerGas in gwei (post-EIP-1559;
+                                  null pre-merge)
+          eth_gas_limit         : block.gasLimit
+        """
+        if not self._etherscan_key:
+            return pd.DataFrame()
+
+        end_dt = pd.Timestamp.utcnow().floor('D')
+        start_dt = end_dt - pd.Timedelta(days=self.days)
+        # Use midnight UTC of each day as the query timestamp
+        days = pd.date_range(start_dt, end_dt, freq='D', inclusive='left')
+
+        rows = []
+        chainid = ETHERSCAN_CHAINID['ETH']
+
+        for i, day in enumerate(days):
+            ts = int(day.timestamp())
+            block_n = self._etherscan_block_at(chainid, ts)
+            if block_n is None:
+                continue
+            block = self._etherscan_block(chainid, block_n)
+            if block is None:
+                continue
+
+            try:
+                tx_count = len(block.get('transactions', []))
+                gas_used = int(block.get('gasUsed', '0x0'), 16)
+                gas_limit = int(block.get('gasLimit', '0x0'), 16)
+                base_fee_hex = block.get('baseFeePerGas')
+                base_fee_gwei = (int(base_fee_hex, 16) / 1e9
+                                  if base_fee_hex else float('nan'))
+            except (ValueError, TypeError):
+                continue
+
+            rows.append({
+                'timestamp': day,
+                'eth_transaction_count': float(tx_count),
+                'eth_gas_used': float(gas_used),
+                'eth_gas_limit': float(gas_limit),
+                'eth_base_fee_gwei': base_fee_gwei,
+            })
+            if (i + 1) % 100 == 0:
+                print(f"    [etherscan ETH] {i + 1}/{len(days)} days fetched")
+
+        if not rows:
+            return pd.DataFrame()
+        return pd.DataFrame(rows).sort_values('timestamp').reset_index(drop=True)
+
+    def _etherscan_block_at(self, chainid: int, ts: int) -> Optional[int]:
+        """Get block number closest to (and before) a unix timestamp."""
+        params = {
+            'chainid': chainid,
+            'module': 'block',
+            'action': 'getblocknobytime',
+            'timestamp': ts,
+            'closest': 'before',
+            'apikey': self._etherscan_key,
+        }
+        try:
+            r = requests.get(ETHERSCAN_V2_BASE, params=params,
+                              timeout=self.timeout)
+            r.raise_for_status()
+            payload = r.json()
+            time.sleep(0.22)  # rate-limit pad (≤5 req/sec)
+            if str(payload.get('status')) != '1':
+                return None
+            return int(payload['result'])
+        except Exception:
+            return None
+
+    def _etherscan_block(self, chainid: int, block_n: int) -> Optional[Dict]:
+        """Fetch a single block via the JSON-RPC proxy. boolean=false returns
+        transaction hashes only (lighter); we use len() for tx count."""
+        params = {
+            'chainid': chainid,
+            'module': 'proxy',
+            'action': 'eth_getBlockByNumber',
+            'tag': hex(block_n),
+            'boolean': 'false',
+            'apikey': self._etherscan_key,
+        }
+        try:
+            r = requests.get(ETHERSCAN_V2_BASE, params=params,
+                              timeout=self.timeout)
+            r.raise_for_status()
+            payload = r.json()
+            time.sleep(0.22)  # rate-limit pad
+            return payload.get('result')
+        except Exception:
+            return None
+
     def _z_score(self, df: pd.DataFrame) -> pd.DataFrame:
         """Add `*_z` columns (rolling 60-day z-score, causal — no lookahead)."""
         out = df.copy()
@@ -143,7 +269,10 @@ class OnChainMetricsFetcher:
         return out
 
     def _empty_schema(self) -> pd.DataFrame:
-        """Empty DataFrame with the same column schema as a successful fetch."""
-        cols = ['timestamp'] + list(BLOCKCHAIN_INFO_METRICS.values())
-        cols += [f'{c}_z' for c in BLOCKCHAIN_INFO_METRICS.values()]
+        """Empty DataFrame with a unified BTC+ETH column schema."""
+        btc_cols = list(BLOCKCHAIN_INFO_METRICS.values())
+        eth_cols = ['eth_transaction_count', 'eth_gas_used',
+                    'eth_gas_limit', 'eth_base_fee_gwei']
+        cols = ['timestamp'] + btc_cols + eth_cols
+        cols += [f'{c}_z' for c in btc_cols + eth_cols]
         return pd.DataFrame(columns=cols)

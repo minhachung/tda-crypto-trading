@@ -104,14 +104,18 @@ SYNTHETIC_FEATURE_PATTERNS = [
     'active_addresses_z',             # FeatureBuilder z-score (real one is 'active_addresses' from blockchain.info, but blockchain.info BTC doesn't expose it)
 ]
 
-# Columns from REAL fetchers (blockchain.info, Coinbase+Kraken). These are
-# real and may enter paper-grade runs.
+# Columns from REAL fetchers (blockchain.info, Etherscan V2, Coinbase+Kraken).
+# These are real and may enter paper-grade runs.
 REAL_EXTERNAL_COLUMNS = {
-    # blockchain.info (BTC only)
+    # blockchain.info BTC
     'transaction_count', 'hash_rate', 'mempool_size', 'mean_block_size',
     'total_fees_usd', 'miners_revenue',
     'transaction_count_z', 'hash_rate_z', 'mempool_size_z',
     'mean_block_size_z', 'total_fees_usd_z', 'miners_revenue_z',
+    # Etherscan V2 ETH (block-by-day walk, free tier)
+    'eth_transaction_count', 'eth_gas_used', 'eth_gas_limit', 'eth_base_fee_gwei',
+    'eth_transaction_count_z', 'eth_gas_used_z', 'eth_gas_limit_z',
+    'eth_base_fee_gwei_z',
     # cross-exchange (Coinbase + Kraken)
     'spread_pct', 'spread_zscore_60', 'spread_persistence',
 }
