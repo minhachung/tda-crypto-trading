@@ -1,39 +1,45 @@
 # V13 Marginal TDA Contribution Test
-**Date:** 2026-05-09 23:16
+**Date:** 2026-05-10 01:02
 **Days:** 90
 **Symbols:** BTC,ETH
 **Horizon:** 72 rows | Window: 20 | Embargo: 0
 **Synthetic features:** DISABLED (paper-grade)
 **Permutations:** B=19 (min achievable p = 0.0500)
 ## Reality check: which feature columns are real vs synthetic?
-- **Real feature columns (44):** `timestamp, open, high, low, close, volume, log_return, log_return_5, log_return_24, accel, gk_vol_20, gk_vol_60, parkinson_20, rv_20, rv_60, hl_spread, oc_spread, vol_zscore_20, vol_momentum, vol_ratio_5_20...`
+- **Real feature columns (59):** `timestamp, open, high, low, close, volume, log_return, log_return_5, log_return_24, accel, gk_vol_20, gk_vol_60, parkinson_20, rv_20, rv_60, hl_spread, oc_spread, vol_zscore_20, vol_momentum, vol_ratio_5_20...`
+
+## Real external data coverage per asset
+| Asset | On-chain (blockchain.info) | Cross-exchange (Coinbase+Kraken) |
+|-------|---------------------------:|---------------------------------:|
+| BTC | ✓ 91 daily rows | ✓ 90 daily rows |
+| ETH | — | ✓ 90 daily rows |
 
 ## 7-condition ablation table
 | Condition | Signal-weighted Acc | n_signals | mean AUC |
 |-----------|-------------------:|----------:|---------:|
-| base | 0.5272 | 2003 | 0.5513 |
-| v1_only | 0.5406 | 1565 | 0.4870 |
-| v2_only | 0.2784 | 668 | 0.5000 |
-| base_plus_v1 | 0.5222 | 2386 | 0.5428 |
-| base_plus_v2 | 0.5272 | 2003 | 0.5513 |
-| base_plus_v1_plus_v2 | 0.5222 | 2386 | 0.5428 |
-| base_plus_shuffled_v2 | 0.5272 | 2003 | 0.5513 |
+| base | 0.5247 | 2007 | 0.5497 |
+| v1_only | 0.5417 | 1584 | 0.4900 |
+| v2_only | 0.2754 | 668 | 0.5000 |
+| base_plus_v1 | 0.5247 | 2369 | 0.5441 |
+| base_plus_v2 | 0.5247 | 2007 | 0.5497 |
+| base_plus_v1_plus_v2 | 0.5247 | 2369 | 0.5441 |
+| base_plus_shuffled_v2 | 0.5247 | 2007 | 0.5497 |
 
 ## v2 verdict (real vs shuffled)
 🟡 Real v2 vs shuffled: +0.00 pp — within noise. v2 likely carries no real signal beyond the shuffled control.
 
-## Permutation test (POST-SELECTION single-config diagnostic)
-- **Selected condition:** `v1_only` (chosen as best of non-shuffled conditions on TEST FOLD — this is post-selection, so the p-value is a *diagnostic* not a multiple-testing-aware main result.)
-- Real signal-weighted accuracy: **0.5406**
-- Null mean ± std: 0.3127 ± 0.0400
-- p-value: **0.0500** (B=19; lower-bounded at 0.0500)
-- Verdict: 🟡 Marginal (post-selection diagnostic)
+## Permutation test — FULL-GRID (multiple-testing aware)
+- **Real best:** `v1_only` = 0.5417 (picked among 6 real conditions)
+- **Null distribution:** for each of B=19 permutations, all real conditions were re-evaluated under the SAME shuffled labels, and the MAX accuracy across conditions was taken. This is the multiple-testing-aware null.
+- Null max mean ± std: 0.4451 ± 0.0399
+- **p_grid = 0.0500** (B=19, lower-bounded at 0.0500)
+- Verdict: 🟡 Marginal — borderline after multiple-testing correction.
 
 ## H0 vs H1 contribution
 | Homology | Signal-weighted Acc | n_test |
 |----------|-------------------:|-------:|
-| H0 only | 0.5404 | 3340 |
-| H1 only | 0.5404 | 3340 |
+| H0 only | 0.5407 | 3340 |
+| H1 only | 0.5407 | 3340 |
 
 ## Methodology notes
 - **Targets:** built via `multi_asset_pipeline.add_targets`; final `horizon` rows per asset are dropped (no silent target=0).
@@ -48,4 +54,4 @@
 |---------|---------:|--------:|-------|
 | v10 (1095d, 7 assets) | 60.68% | 0.1584 | full-grid, NOT significant |
 | v12 (logistic + tda_v1) | 58.06% | n/a | leak-safe ablation |
-| **v13** | 54.06% (v1_only) | **0.0500** | post-selection single-config |
+| **v13** | 54.17% (v1_only) | **0.0500** | post-selection single-config |

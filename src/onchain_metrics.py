@@ -1,20 +1,31 @@
 """
-On-Chain Metrics Fetcher: Network activity + whale movement data.
+On-Chain Metrics Fetcher: REAL data from blockchain.info charts API (free).
 
-Free sources:
-- Glassnode API (requires free account, but no credit card)
-- Messari API (free tier, no key required)
-- CryptoQuant (emerging data provider)
+blockchain.info exposes a no-auth, free public charts API for Bitcoin
+network metrics. ETH/altcoin coverage is NOT available without a paid
+provider, so this module honestly returns empty data for non-BTC assets
+(callers detect via `len(df) == 0` and treat the asset as having no
+on-chain features rather than fabricating synthetic ones).
 
-For MVP: Synthetic on-chain metrics (Z-scored network stats).
-For production: Replace with live Glassnode/Messari feeds.
+Endpoint:  https://api.blockchain.info/charts/{metric}?timespan={N}days&format=json
+Metrics:   n-transactions, hash-rate, mempool-size, avg-block-size,
+           transaction-fees-usd, miners-revenue
+Coverage:  BTC only (free)
+
+Why this trade-off (BTC-only real > all-asset synthetic):
+  - The user explicitly said "no paid services"
+  - Synthetic on-chain features bias every model that touches them — they
+    look like signal in-sample (random walks have structure) but cannot
+    generalise. BTC-real + everything-else-empty is the honest version.
 """
 
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-from typing import Optional, Dict, Tuple
+from __future__ import annotations
+
 import warnings
+from typing import Dict, List, Optional, Tuple
+
+import numpy as np
+import pandas as pd
 
 try:
     import requests
@@ -22,113 +33,117 @@ except ImportError:
     requests = None
 
 
+# blockchain.info charts: free, no auth, BTC only.
+BLOCKCHAIN_INFO_BASE = "https://api.blockchain.info/charts"
+BLOCKCHAIN_INFO_METRICS = {
+    'n-transactions':       'transaction_count',
+    'hash-rate':            'hash_rate',
+    'mempool-size':         'mempool_size',
+    'avg-block-size':       'mean_block_size',
+    'transaction-fees-usd': 'total_fees_usd',
+    'miners-revenue':       'miners_revenue',
+}
+
+
+def is_real_onchain_supported(symbol: str) -> bool:
+    """True iff a free, no-auth real on-chain source exists for this symbol.
+
+    Currently BTC only via blockchain.info. ETH would need Etherscan with
+    a free API key (sign-up required); altcoins need paid providers.
+    """
+    return symbol.upper() == 'BTC'
+
+
 class OnChainMetricsFetcher:
-    """Fetch on-chain metrics from free data sources."""
+    """Fetch real on-chain metrics from blockchain.info (BTC, free, no auth).
 
-    GLASSNODE_API = "https://api.glassnode.com/v1"
-    MESSARI_API = "https://data.messari.io/api/v1"
+    For non-BTC assets returns an empty DataFrame so callers detect
+    "no on-chain features available" rather than getting synthetic noise.
+    """
 
-    def __init__(self, symbol: str, days: int = 365):
-        """
-        Initialize on-chain fetcher.
-
-        Args:
-            symbol: Crypto symbol (e.g., 'BTC', 'ETH')
-            days: Historical window
-        """
+    def __init__(self, symbol: str, days: int = 365, timeout: int = 30):
         self.symbol = symbol.upper()
         self.days = days
-        self.asset_slug = self._get_asset_slug()
-
-    def _get_asset_slug(self) -> str:
-        """Map symbol to API slug."""
-        slug_map = {
-            'BTC': 'bitcoin', 'ETH': 'ethereum', 'SOL': 'solana',
-            'ADA': 'cardano', 'DOT': 'polkadot', 'LINK': 'chainlink',
-            'MATIC': 'polygon', 'AVAX': 'avalanche', 'XRP': 'xrp',
-        }
-        return slug_map.get(self.symbol, self.symbol.lower())
+        self.timeout = timeout
+        self.is_supported = is_real_onchain_supported(self.symbol)
 
     def fetch_metrics(self) -> pd.DataFrame:
-        """
-        Fetch on-chain metrics.
-
-        Returns:
-            DataFrame with columns: timestamp, active_addresses, transaction_count,
-                                    mvrv_ratio, exchange_inflow_pct, whale_supply_pct,
-                                    developer_activity (+ Z-scored versions)
-        """
-        # Try Glassnode first; fall back to synthetic
+        """Fetch real on-chain metrics or return empty DataFrame."""
+        if requests is None:
+            warnings.warn("requests not installed; cannot fetch blockchain.info")
+            return self._empty_schema()
+        if not self.is_supported:
+            return self._empty_schema()
         try:
-            return self._fetch_glassnode()
+            df = self._fetch_blockchain_info()
+            if df.empty:
+                return self._empty_schema()
+            return self._z_score(df)
         except Exception as e:
-            print(f"  Glassnode fetch failed for {self.symbol}: {e}")
-            return self._generate_synthetic_metrics()
-
-    def _fetch_glassnode(self) -> pd.DataFrame:
-        """Fetch from Glassnode API (requires API key)."""
-        # Placeholder: Glassnode requires authentication
-        # For MVP, we generate synthetic metrics instead
-        raise NotImplementedError("Glassnode integration requires API key setup")
-
-    def _generate_synthetic_metrics(self) -> pd.DataFrame:
-        """
-        Generate synthetic on-chain metrics for MVP.
-
-        Returns:
-            DataFrame with realistic but synthetic on-chain time series.
-        """
-        end_date = pd.Timestamp.utcnow()
-        start_date = end_date - pd.Timedelta(days=self.days)
-        timestamps = pd.date_range(start_date, end_date, freq='D')
-
-        n = len(timestamps)
-
-        # Synthetic time series: random walk + seasonal + trend
-        active_addresses = np.cumsum(np.random.randn(n) * 100) + 1000 * (1 + 0.5 * np.sin(np.arange(n) * 2 * np.pi / 365))
-        active_addresses = np.maximum(active_addresses, 100)  # Ensure positive
-
-        transaction_count = np.cumsum(np.random.randn(n) * 500) + 5000 + 1000 * np.sin(np.arange(n) * 2 * np.pi / 365)
-        transaction_count = np.maximum(transaction_count, 10)
-
-        # MVRV ratio: mean-reversion (oscillates around 1.0)
-        mvrv_ratio = 1.0 + 0.3 * np.sin(np.arange(n) * 2 * np.pi / 90) + np.random.randn(n) * 0.1
-        mvrv_ratio = np.maximum(mvrv_ratio, 0.5)
-
-        # Exchange inflow: 50% of time negative (accumulation), 50% positive (distribution)
-        exchange_inflow = np.random.randn(n) * 5 + 2 * np.sin(np.arange(n) * 2 * np.pi / 180)
-
-        # Whale supply: % of coins in wallets > $1M (inverse relationship with price)
-        whale_supply = 30 + 5 * np.sin(np.arange(n) * 2 * np.pi / 120) + np.random.randn(n) * 2
-        whale_supply = np.clip(whale_supply, 5, 60)
-
-        # Developer activity: commits/week (more for ETH/DOT than others)
-        base_commits = {'ETH': 150, 'DOT': 120}.get(self.symbol, 50)
-        developer_activity = base_commits + np.cumsum(np.random.randn(n) * 5)
-        developer_activity = np.maximum(developer_activity, 1)
-
-        df = pd.DataFrame({
-            'timestamp': timestamps,
-            'active_addresses': active_addresses,
-            'transaction_count': transaction_count,
-            'mvrv_ratio': mvrv_ratio,
-            'exchange_inflow_pct': exchange_inflow,
-            'whale_supply_pct': whale_supply,
-            'developer_activity': developer_activity,
-        })
-
-        # Z-score all features
-        for col in df.columns[1:]:
-            df[f'{col}_z'] = (df[col] - df[col].mean()) / (df[col].std() + 1e-8)
-
-        return df
+            print(f"  [onchain {self.symbol}] fetch failed: {e}")
+            return self._empty_schema()
 
     def fetch_network_status(self) -> Dict[str, bool]:
-        """Return network status (active, delisting risk, etc.)."""
-        status = {
-            'is_active': True,
-            'has_staking': self.symbol in ['ETH', 'ADA', 'DOT', 'SOL'],
-            'has_defi': self.symbol in ['ETH', 'LINK', 'MATIC'],
-            'is_layer_2': self.symbol in ['MATIC', 'ARB', 'OPT'],
+        """Metadata flags about this asset."""
+        return {
+            'is_real_onchain_supported': self.is_supported,
+            'has_staking': self.symbol in {'ETH', 'ADA', 'DOT', 'SOL'},
+            'has_defi': self.symbol in {'ETH', 'LINK', 'MATIC'},
+            'is_layer_2': self.symbol in {'MATIC', 'ARB', 'OPT'},
         }
-        return status
+
+    # --- internals ---
+
+    def _fetch_blockchain_info(self) -> pd.DataFrame:
+        """Hit blockchain.info /charts endpoints and merge into one DataFrame."""
+        timespan = f"{self.days}days"
+        per_metric = []
+        for metric_slug, friendly_name in BLOCKCHAIN_INFO_METRICS.items():
+            url = f"{BLOCKCHAIN_INFO_BASE}/{metric_slug}"
+            try:
+                r = requests.get(url, params={'timespan': timespan,
+                                              'format': 'json'},
+                                  timeout=self.timeout,
+                                  headers={'User-Agent': 'tda-crypto-trading-research/1.0'})
+                r.raise_for_status()
+                payload = r.json()
+            except Exception as e:
+                print(f"    [onchain] {metric_slug} unavailable: {e}")
+                continue
+
+            values = payload.get('values', [])
+            if not values:
+                continue
+            metric_df = pd.DataFrame(values).rename(columns={'x': 'unix',
+                                                             'y': friendly_name})
+            metric_df['timestamp'] = pd.to_datetime(metric_df['unix'],
+                                                     unit='s').dt.floor('D')
+            metric_df = metric_df[['timestamp', friendly_name]]
+            metric_df = metric_df.drop_duplicates(subset='timestamp')
+            per_metric.append(metric_df)
+
+        if not per_metric:
+            return pd.DataFrame()
+
+        # Outer-join all metrics on timestamp
+        merged = per_metric[0]
+        for m in per_metric[1:]:
+            merged = pd.merge(merged, m, on='timestamp', how='outer')
+        return merged.sort_values('timestamp').reset_index(drop=True)
+
+    def _z_score(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Add `*_z` columns (rolling 60-day z-score, causal — no lookahead)."""
+        out = df.copy()
+        for col in df.columns:
+            if col == 'timestamp':
+                continue
+            roll_mean = out[col].rolling(window=60, min_periods=10).mean()
+            roll_std = out[col].rolling(window=60, min_periods=10).std()
+            out[f'{col}_z'] = (out[col] - roll_mean) / (roll_std + 1e-8)
+        return out
+
+    def _empty_schema(self) -> pd.DataFrame:
+        """Empty DataFrame with the same column schema as a successful fetch."""
+        cols = ['timestamp'] + list(BLOCKCHAIN_INFO_METRICS.values())
+        cols += [f'{c}_z' for c in BLOCKCHAIN_INFO_METRICS.values()]
+        return pd.DataFrame(columns=cols)

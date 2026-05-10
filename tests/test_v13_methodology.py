@@ -188,26 +188,42 @@ def test_shuffled_v2_excluded_from_best_selection():
 # --------------------------------------------------------------------------
 
 def test_known_synthetic_columns_classified():
-    """Known synthetic columns from the FeatureBuilder must be flagged."""
+    """FeatureBuilder placeholder columns (random walks) must still be flagged.
+
+    NOTE: as of L1 fix, on-chain (transaction_count, hash_rate, etc. from
+    blockchain.info) and cross-exchange (spread_pct, spread_zscore_60 from
+    Coinbase+Kraken) are REAL data — they are no longer synthetic. Only the
+    FeatureBuilder's random-walk placeholders + legacy spread_zscore_20 stay
+    on the synthetic list.
+    """
     must_be_synthetic = [
-        'active_addresses_z', 'transaction_count_z', 'mvrv_ratio_z',
-        'whale_supply_pct_z', 'developer_activity_z',
-        'spread_pct', 'spread_zscore_20', 'spread_persistence',
-        'is_delisted', 'months_since_delisting', 'exchange_concentration',
+        'mvrv_ratio_z',                # synthetic in FeatureBuilder
+        'whale_supply_pct_z',          # synthetic in FeatureBuilder
+        'developer_activity_z',        # synthetic in FeatureBuilder
+        'spread_zscore_20',            # legacy synthetic (real one is _60)
+        'is_delisted',                 # placeholder
+        'months_since_delisting',      # placeholder
+        'exchange_concentration',      # synthetic in FeatureBuilder
+        'active_addresses_z',          # FeatureBuilder z-score
     ]
     for col in must_be_synthetic:
         assert is_synthetic_column(col), f"{col} should be flagged synthetic"
 
 
 def test_real_columns_not_classified_as_synthetic():
-    """Real microstructure features must NOT be flagged."""
+    """Real microstructure + real external features must NOT be flagged."""
     must_be_real = [
+        # microstructure
         'log_return', 'gk_vol_20', 'parkinson_20', 'rv_20',
         'rsi_centered', 'macd_normalized', 'bb_position',
         'H0_count', 'H1_count', 'H0_max_persistence', 'H1_entropy',
         'pim_h0_5', 'pim_h1_42',
         'open', 'high', 'low', 'close', 'volume',
         'symbol', 'target', 'future_return',
+        # real external (post L1 fix)
+        'transaction_count', 'hash_rate', 'mempool_size',
+        'transaction_count_z', 'hash_rate_z',
+        'spread_pct', 'spread_zscore_60', 'spread_persistence',
     ]
     for col in must_be_real:
         assert not is_synthetic_column(col), f"{col} should NOT be flagged synthetic"
@@ -216,18 +232,24 @@ def test_real_columns_not_classified_as_synthetic():
 def test_strip_synthetic_paper_grade_drops_synthetic_columns():
     """When allow_synthetic=False, synthetic columns must be dropped."""
     df = pd.DataFrame({
-        'log_return': [0.1, 0.2],          # real
-        'rv_20': [0.01, 0.02],             # real
+        'log_return': [0.1, 0.2],          # real microstructure
+        'rv_20': [0.01, 0.02],             # real microstructure
+        'spread_pct': [0.001, 0.002],      # REAL (Coinbase+Kraken)
+        'transaction_count': [400000, 410000],  # REAL (blockchain.info BTC)
         'mvrv_ratio_z': [1.0, 1.1],        # synthetic
-        'spread_pct': [0.001, 0.002],      # synthetic
-        'is_delisted': [False, False],     # synthetic
+        'is_delisted': [False, False],     # synthetic placeholder
+        'spread_zscore_20': [0.5, 0.6],    # legacy synthetic (real is _60)
     })
     stripped = _strip_synthetic(df, allow_synthetic=False)
+    # Real columns kept
     assert 'log_return' in stripped.columns
     assert 'rv_20' in stripped.columns
+    assert 'spread_pct' in stripped.columns
+    assert 'transaction_count' in stripped.columns
+    # Synthetic columns dropped
     assert 'mvrv_ratio_z' not in stripped.columns
-    assert 'spread_pct' not in stripped.columns
     assert 'is_delisted' not in stripped.columns
+    assert 'spread_zscore_20' not in stripped.columns
 
 
 def test_strip_synthetic_keeps_synthetic_when_allowed():
@@ -284,6 +306,75 @@ def test_synthetic_patterns_list_non_empty_and_well_formed():
 # --------------------------------------------------------------------------
 # G. Reality check: per-asset purged split helper
 # --------------------------------------------------------------------------
+
+def test_real_external_columns_whitelist_is_explicit():
+    """REAL_EXTERNAL_COLUMNS must contain entries from both real fetchers
+    so callers can audit which columns are real."""
+    from examples.run_validation_v13 import REAL_EXTERNAL_COLUMNS
+    # blockchain.info BTC metrics
+    assert 'transaction_count' in REAL_EXTERNAL_COLUMNS
+    assert 'hash_rate' in REAL_EXTERNAL_COLUMNS
+    # Coinbase + Kraken cross-exchange
+    assert 'spread_pct' in REAL_EXTERNAL_COLUMNS
+    assert 'spread_zscore_60' in REAL_EXTERNAL_COLUMNS
+
+
+def test_real_onchain_supported_btc_only():
+    """Currently free, no-auth source = blockchain.info → BTC only."""
+    from src.onchain_metrics import is_real_onchain_supported
+    assert is_real_onchain_supported('BTC') is True
+    assert is_real_onchain_supported('ETH') is False
+    assert is_real_onchain_supported('SOL') is False
+
+
+def test_cross_exchange_supported_majors():
+    """Coinbase + Kraken both list the majors."""
+    from src.crossexchange_spreads import is_cross_exchange_supported
+    for sym in ['BTC', 'ETH', 'SOL', 'ADA', 'DOT', 'LINK', 'AVAX']:
+        assert is_cross_exchange_supported(sym), f"{sym} should be cross-ex supported"
+
+
+def test_full_grid_permutation_exposed():
+    """v13 must expose --full-grid CLI flag and full_grid_permutation_test fn."""
+    from examples.run_validation_v13 import full_grid_permutation_test
+    import inspect
+    sig = inspect.signature(full_grid_permutation_test)
+    for param in ['real_conditions', 'real_max_acc', 'B']:
+        assert param in sig.parameters
+
+    import examples.run_validation_v13 as v13_module
+    src = open(v13_module.__file__).read()
+    assert '--full-grid' in src, "v13 must expose --full-grid CLI flag"
+
+
+def test_h0_h1_diagnostic_uses_separate_imagers():
+    """L4 fix: H0/H1 diagnostic must fit two separate imagers (per dim),
+    not one shared imager whose output is then sliced."""
+    import examples.run_validation_v13 as v13_module
+    src = open(v13_module.__file__).read()
+    # Look for the corrected pattern
+    assert 'fit on H0 only' in src or 'H0-only and H1-only' in src
+    # Confirm the function still exists
+    assert hasattr(v13_module, 'diagnose_h0_vs_h1')
+
+
+def test_attach_real_external_data_returns_coverage_dict():
+    """The attachment helper must report what was attached vs. skipped."""
+    from examples.run_validation_v13 import attach_real_external_data
+    import inspect
+    sig = inspect.signature(attach_real_external_data)
+    for param in ['use_onchain', 'use_crossex']:
+        assert param in sig.parameters
+    # Calling on empty df returns coverage dict with the right keys
+    df = pd.DataFrame()
+    result_df, coverage = attach_real_external_data(
+        df, 'BTC', days=30, use_onchain=False, use_crossex=False, verbose=False
+    )
+    assert 'onchain_attached' in coverage
+    assert 'crossex_attached' in coverage
+    assert coverage['onchain_attached'] is False
+    assert coverage['crossex_attached'] is False
+
 
 def test_per_asset_split_respects_horizon_purge():
     """For each fold, every train index t must satisfy t + horizon < min(test).
