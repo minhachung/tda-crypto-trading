@@ -1,31 +1,51 @@
-# V13 Comprehensive Validation Results
-
-**Date:** 2026-05-09 22:50
+# V13 Marginal TDA Contribution Test
+**Date:** 2026-05-09 23:16
 **Days:** 90
 **Symbols:** BTC,ETH
+**Horizon:** 72 rows | Window: 20 | Embargo: 0
+**Synthetic features:** DISABLED (paper-grade)
+**Permutations:** B=19 (min achievable p = 0.0500)
+## Reality check: which feature columns are real vs synthetic?
+- **Real feature columns (44):** `timestamp, open, high, low, close, volume, log_return, log_return_5, log_return_24, accel, gk_vol_20, gk_vol_60, parkinson_20, rv_20, rv_60, hl_spread, oc_spread, vol_zscore_20, vol_momentum, vol_ratio_5_20...`
 
-## Headline Numbers
+## 7-condition ablation table
+| Condition | Signal-weighted Acc | n_signals | mean AUC |
+|-----------|-------------------:|----------:|---------:|
+| base | 0.5272 | 2003 | 0.5513 |
+| v1_only | 0.5406 | 1565 | 0.4870 |
+| v2_only | 0.2784 | 668 | 0.5000 |
+| base_plus_v1 | 0.5222 | 2386 | 0.5428 |
+| base_plus_v2 | 0.5272 | 2003 | 0.5513 |
+| base_plus_v1_plus_v2 | 0.5222 | 2386 | 0.5428 |
+| base_plus_shuffled_v2 | 0.5272 | 2003 | 0.5513 |
 
-| Model | Test Accuracy | n_test |
-|-------|---------------|--------|
-| baseline_logistic | 0.5091 | 605 |
-| ensemble | 0.5421 | 605 |
-| regime_low | 0.5062 | 324 |
-| regime_medium | 0.5241 | 145 |
-| regime_high | 0.5294 | 136 |
-| regime_global | 0.5157 | 605 |
+## v2 verdict (real vs shuffled)
+🟡 Real v2 vs shuffled: +0.00 pp — within noise. v2 likely carries no real signal beyond the shuffled control.
 
-## Permutation Test
+## Permutation test (POST-SELECTION single-config diagnostic)
+- **Selected condition:** `v1_only` (chosen as best of non-shuffled conditions on TEST FOLD — this is post-selection, so the p-value is a *diagnostic* not a multiple-testing-aware main result.)
+- Real signal-weighted accuracy: **0.5406**
+- Null mean ± std: 0.3127 ± 0.0400
+- p-value: **0.0500** (B=19; lower-bounded at 0.0500)
+- Verdict: 🟡 Marginal (post-selection diagnostic)
 
-- Real accuracy: 0.5421
-- Null mean ± std: 0.4829 ± 0.0170
-- **p-value: 0.0000** (B=30)
-- **Verdict:** ✅ Significant
+## H0 vs H1 contribution
+| Homology | Signal-weighted Acc | n_test |
+|----------|-------------------:|-------:|
+| H0 only | 0.5404 | 3340 |
+| H1 only | 0.5404 | 3340 |
 
-## Comparison vs v10/v12
+## Methodology notes
+- **Targets:** built via `multi_asset_pipeline.add_targets`; final `horizon` rows per asset are dropped (no silent target=0).
+- **Splits:** per-asset time-series 5-fold; train indices purged so `max(train) + horizon + embargo < min(test)`.
+- **TDA v2 imager:** fit on each fold's purged-train diagrams; transform-only on val/test.
+- **Causal point-cloud normalization:** each window's mean/std uses only history up to window end.
+- **Permutation:** train+val labels shuffled consistently; test labels untouched. p = (n_above + 1) / (B + 1) so the reported p is never 0.
+- **Model selection:** condition chosen by signal-weighted accuracy across all folds is a *post-selection* choice; the permutation p reported is therefore a diagnostic, not a multiple-testing-aware main result. For multiple-testing-aware p, the full 7-condition × B grid would need to be permuted.
 
-| Version | Best Accuracy | p-value |
-|---------|---------------|--------:|
-| v10 | 60.68% | 0.1584 |
-| v12 (logistic + tda_v1) | 58.06% | n/a |
-| **v13** | 54.21% | **0.0000** |
+## Comparison vs prior versions
+| Version | Headline | p-value | Notes |
+|---------|---------:|--------:|-------|
+| v10 (1095d, 7 assets) | 60.68% | 0.1584 | full-grid, NOT significant |
+| v12 (logistic + tda_v1) | 58.06% | n/a | leak-safe ablation |
+| **v13** | 54.06% (v1_only) | **0.0500** | post-selection single-config |
